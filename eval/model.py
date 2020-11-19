@@ -8,8 +8,8 @@ import torch.nn.functional as F
 
 from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
 
-from miscc.config import cfg
-from GlobalAttention import GlobalAttentionGeneral as ATT_NET
+from .miscc.config import cfg
+from .GlobalAttention import GlobalAttentionGeneral as ATT_NET
 
 
 # ############## Text2Image Encoder-Decoder #######
@@ -269,7 +269,7 @@ class CNN_ENCODER(nn.Module):
         model.load_state_dict(model_zoo.load_url(url))
         for param in model.parameters():
             param.requires_grad = False
-        print('Load pretrained model from ', url)
+        print(('Load pretrained model from ', url))
         # print(model)
 
         self.define_module(model)

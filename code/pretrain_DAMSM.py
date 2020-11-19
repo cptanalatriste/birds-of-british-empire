@@ -1,4 +1,4 @@
-from __future__ import print_function
+
 
 from miscc.utils import mkdir_p
 from miscc.utils import build_super_images
@@ -167,7 +167,7 @@ def build_models():
     # build model ############################################################
     text_encoder = RNN_ENCODER(dataset.n_words, nhidden=cfg.TEXT.EMBEDDING_DIM)
     image_encoder = CNN_ENCODER(cfg.TEXT.EMBEDDING_DIM)
-    labels = Variable(torch.LongTensor(range(batch_size)))
+    labels = Variable(torch.LongTensor(list(range(batch_size))))
     start_epoch = 0
     if cfg.TRAIN.NET_E != '':
         state_dict = torch.load(cfg.TRAIN.NET_E)

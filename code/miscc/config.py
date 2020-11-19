@@ -1,5 +1,5 @@
-from __future__ import division
-from __future__ import print_function
+
+
 
 import os.path as osp
 import numpy as np
@@ -70,9 +70,9 @@ def _merge_a_into_b(a, b):
     if type(a) is not edict:
         return
 
-    for k, v in a.iteritems():
+    for k, v in a.items():
         # a must specify keys that are in b
-        if not b.has_key(k):
+        if k not in b:
             raise KeyError('{} is not a valid config key'.format(k))
 
         # the types must match, too

@@ -1,4 +1,4 @@
-from __future__ import print_function
+
 
 import os
 import sys
@@ -10,13 +10,13 @@ from PIL import Image
 import torch.onnx
 from datetime import datetime
 from torch.autograd import Variable
-from miscc.config import cfg
-from miscc.utils import build_super_images2
-from model import RNN_ENCODER, G_NET
+from .miscc.config import cfg
+from .miscc.utils import build_super_images2
+from .model import RNN_ENCODER, G_NET
 from azure.storage.blob import BlockBlobService
 
 if sys.version_info[0] == 2:
-    import cPickle as pickle
+    import pickle as pickle
 else:
     import pickle
 

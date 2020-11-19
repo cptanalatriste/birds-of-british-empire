@@ -1,12 +1,12 @@
 import os
 import time
 import random
-from eval import *
+from .eval import *
 from flask import Flask, jsonify, request, abort
 from applicationinsights import TelemetryClient
 from applicationinsights.requests import WSGIApplication
 from applicationinsights.exceptions import enable
-from miscc.config import cfg
+from .miscc.config import cfg
 #from werkzeug.contrib.profiler import ProfilerMiddleware
 
 enable(os.environ["TELEMETRY"])

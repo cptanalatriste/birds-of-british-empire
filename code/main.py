@@ -1,4 +1,4 @@
-from __future__ import print_function
+
 
 from miscc.config import cfg, cfg_from_file
 from datasets import TextDataset
@@ -53,7 +53,7 @@ def gen_example(wordtoix, algo):
                 for sent in sentences:
                     if len(sent) == 0:
                         continue
-                    sent = sent.replace("\ufffd\ufffd", " ")
+                    sent = sent.replace("\\ufffd\\ufffd", " ")
                     tokenizer = RegexpTokenizer(r'\w+')
                     tokens = tokenizer.tokenize(sent.lower())
                     if len(tokens) == 0:

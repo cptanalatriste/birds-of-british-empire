@@ -172,7 +172,7 @@ class CNN_ENCODER(nn.Module):
         model.load_state_dict(model_zoo.load_url(url))
         for param in model.parameters():
             param.requires_grad = False
-        print('Load pretrained model from ', url)
+        print(('Load pretrained model from ', url))
         # print(model)
 
         self.define_module(model)

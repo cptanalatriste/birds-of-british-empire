@@ -1,4 +1,4 @@
-from __future__ import print_function
+
 from six.moves import range
 
 import torch
@@ -148,7 +148,7 @@ class condGANTrainer(object):
         batch_size = self.batch_size
         real_labels = Variable(torch.FloatTensor(batch_size).fill_(1))
         fake_labels = Variable(torch.FloatTensor(batch_size).fill_(0))
-        match_labels = Variable(torch.LongTensor(range(batch_size)))
+        match_labels = Variable(torch.LongTensor(list(range(batch_size))))
         if cfg.CUDA:
             real_labels = real_labels.cuda()
             fake_labels = fake_labels.cuda()
@@ -242,7 +242,7 @@ class condGANTrainer(object):
                 ######################################################
                 # (1) Prepare training data and Compute text embeddings
                 ######################################################
-                data = data_iter.next()
+                data = next(data_iter)
                 imgs, captions, cap_lens, class_ids, keys = prepare_data(data)
 
                 hidden = text_encoder.init_hidden(batch_size)

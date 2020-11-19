@@ -141,8 +141,8 @@ def build_super_images2(real_imgs, captions, cap_lens, ixtoword,
         row_merge = np.concatenate(row_merge_new[:topK], 1)
         txt = np.concatenate(txt_new[:topK], 1)
         if txt.shape[1] != row.shape[1]:
-            print('Warnings: txt', txt.shape, 'row', row.shape,
-                  'row_merge_new', row_merge_new.shape)
+            print(('Warnings: txt', txt.shape, 'row', row.shape,
+                  'row_merge_new', row_merge_new.shape))
             bUpdate = 0
             break
         row = np.concatenate([txt, row_merge], 0)
