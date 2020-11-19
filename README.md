@@ -7,7 +7,7 @@ with Attentional Generative Adversarial Networks](http://openaccess.thecvf.com/c
 
 
 ### Dependencies
-python 2.7
+python 3.5
 
 Pytorch
 
@@ -52,10 +52,14 @@ In addition, please add the project folder to PYTHONPATH and `pip install` the f
   - This is an variant of AttnGAN which applies the propsoed attention mechanisms to DCGAN framework. 
 
 **Sampling**
-- Run `python main.py --cfg cfg/eval_bird.yml --gpu 1` to generate examples from captions in files listed in "./data/birds/example_filenames.txt". Results are saved to `DAMSMencoders/`. 
+- Run `python main.py --cfg cfg/eval_bird.yml --gpu 1` to generate examples from captions in files listed in 
+`./data/birds/example_filenames.txt`. Results are saved to `DAMSMencoders/`. 
+- For sampling, be sure to set `TRAIN.FLAG` and `B_VALIDATION` to `False`. In case of executing the model on a CPU,
+set `--gpu` parameter to a negative value. The file `example_filenames.txt` should contain a list of files, where 
+each file has a one caption per line. After execution, `AttnGAN` will generate 3 image files (with different 
+qualities) and 2 attention maps.
 - Change the `eval_*.yml` files to generate images from other pre-trained models. 
 - Input your own sentence in "./data/birds/example_captions.txt" if you wannt to generate images from customized sentences. 
-
 **Validation**
 - To generate images for all captions in the validation dataset, change B_VALIDATION to True in the eval_*.yml. and then run `python main.py --cfg cfg/eval_bird.yml --gpu 1`
 - We compute inception score for models trained on birds using [StackGAN-inception-model](https://github.com/hanzhanggit/StackGAN-inception-model).
