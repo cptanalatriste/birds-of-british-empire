@@ -12,18 +12,17 @@ import skimage.transform
 
 from miscc.config import cfg
 
-
 # For visualization ################################################
-COLOR_DIC = {0:[128,64,128],  1:[244, 35,232],
-             2:[70, 70, 70],  3:[102,102,156],
-             4:[190,153,153], 5:[153,153,153],
-             6:[250,170, 30], 7:[220, 220, 0],
-             8:[107,142, 35], 9:[152,251,152],
-             10:[70,130,180], 11:[220,20, 60],
-             12:[255, 0, 0],  13:[0, 0, 142],
-             14:[119,11, 32], 15:[0, 60,100],
-             16:[0, 80, 100], 17:[0, 0, 230],
-             18:[0,  0, 70],  19:[0, 0,  0]}
+COLOR_DIC = {0: [128, 64, 128], 1: [244, 35, 232],
+             2: [70, 70, 70], 3: [102, 102, 156],
+             4: [190, 153, 153], 5: [153, 153, 153],
+             6: [250, 170, 30], 7: [220, 220, 0],
+             8: [107, 142, 35], 9: [152, 251, 152],
+             10: [70, 130, 180], 11: [220, 20, 60],
+             12: [255, 0, 0], 13: [0, 0, 142],
+             14: [119, 11, 32], 15: [0, 60, 100],
+             16: [0, 80, 100], 17: [0, 0, 230],
+             18: [0, 0, 70], 19: [0, 0, 0]}
 FONT_MAX = 50
 
 
@@ -32,7 +31,7 @@ def drawCaption(convas, captions, ixtoword, vis_size, off1=2, off2=2):
     img_txt = Image.fromarray(convas)
     # get a font
     # fnt = None  # ImageFont.truetype('Pillow/Tests/fonts/FreeMono.ttf', 50)
-    fnt = ImageFont.truetype('Pillow/Tests/fonts/FreeMono.ttf', 50)
+    fnt = ImageFont.truetype("/System/Library/Fonts/SFNSMono.ttf", 50)
     # get a drawing context
     d = ImageDraw.Draw(img_txt)
     sentence_list = []
@@ -72,7 +71,6 @@ def build_super_images(real_imgs, captions, ixtoword,
         istart = (i + 2) * (vis_size + 2)
         iend = (i + 3) * (vis_size + 2)
         text_convas[:, istart:iend, :] = COLOR_DIC[i]
-
 
     real_imgs = \
         nn.Upsample(size=(vis_size, vis_size), mode='bilinear')(real_imgs)
@@ -129,7 +127,7 @@ def build_super_images(real_imgs, captions, ixtoword,
             if (vis_size // att_sze) > 1:
                 one_map = \
                     skimage.transform.pyramid_expand(one_map, sigma=20,
-                                                     upscale=vis_size // att_sze)
+                                                     upscale=vis_size // att_sze, multichannel=True)
             row_beforeNorm.append(one_map)
             minV = one_map.min()
             maxV = one_map.max()
@@ -182,7 +180,7 @@ def build_super_images2(real_imgs, captions, cap_lens, ixtoword,
     max_word_num = np.max(cap_lens)
     text_convas = np.ones([batch_size * FONT_MAX,
                            max_word_num * (vis_size + 2), 3],
-                           dtype=np.uint8)
+                          dtype=np.uint8)
 
     real_imgs = \
         nn.Upsample(size=(vis_size, vis_size), mode='bilinear')(real_imgs)
@@ -211,7 +209,7 @@ def build_super_images2(real_imgs, captions, cap_lens, ixtoword,
         # n x c x h x w --> n x h x w x c
         attn = np.transpose(attn, (0, 2, 3, 1))
         num_attn = cap_lens[i]
-        thresh = 2./float(num_attn)
+        thresh = 2. / float(num_attn)
         #
         img = real_imgs[i]
         row = []
@@ -228,7 +226,8 @@ def build_super_images2(real_imgs, captions, cap_lens, ixtoword,
             if (vis_size // att_sze) > 1:
                 one_map = \
                     skimage.transform.pyramid_expand(one_map, sigma=20,
-                                                     upscale=vis_size // att_sze)
+                                                     upscale=vis_size // att_sze,
+                                                     multichannel=True)
             minV = one_map.min()
             maxV = one_map.max()
             one_map = (one_map - minV) / (maxV - minV)
@@ -253,7 +252,7 @@ def build_super_images2(real_imgs, captions, cap_lens, ixtoword,
             row_merge.append(np.concatenate([merged, middle_pad], 1))
             #
             txt = text_map[i * FONT_MAX:(i + 1) * FONT_MAX,
-                           j * (vis_size + 2):(j + 1) * (vis_size + 2), :]
+                  j * (vis_size + 2):(j + 1) * (vis_size + 2), :]
             row_txt.append(txt)
         # reorder
         row_new = []
@@ -269,7 +268,7 @@ def build_super_images2(real_imgs, captions, cap_lens, ixtoword,
         txt = np.concatenate(txt_new[:topK], 1)
         if txt.shape[1] != row.shape[1]:
             print(('Warnings: txt', txt.shape, 'row', row.shape,
-                  'row_merge_new', row_merge_new.shape))
+                   'row_merge_new', row_merge_new.shape))
             bUpdate = 0
             break
         row = np.concatenate([txt, row_merge], 0)
