@@ -10,7 +10,7 @@ from datasets import prepare_data
 from miscc.config import cfg
 from miscc.losses import discriminator_loss, generator_loss, KL_loss
 from miscc.losses import words_loss
-from miscc.utils import build_super_images, build_super_images2
+from miscc.utils import build_super_images, decode_attention_maps
 from miscc.utils import mkdir_p
 from miscc.utils import weights_init, load_params, copy_G_params
 from model import G_DCGAN, G_NET
@@ -508,10 +508,11 @@ class condGANTrainer(object):
                             attn_maps = attention_maps[attention_model_index]
                             att_sze = attn_maps.size(2)
                             img_set, sentences = \
-                                build_super_images2(im[batch_index].unsqueeze(0),
-                                                    captions[batch_index].unsqueeze(0),
-                                                    [cap_lens_np[batch_index]], self.ixtoword,
-                                                    [attn_maps[batch_index]], att_sze)
+                                decode_attention_maps(im[batch_index].unsqueeze(0),
+                                                      captions[batch_index].unsqueeze(0),
+                                                      [cap_lens_np[batch_index]], self.ixtoword,
+                                                      [attn_maps[batch_index]], att_sze,
+                                                      top_k_most_attended=5)
                             if img_set is not None:
                                 im = Image.fromarray(img_set)
                                 fullpath = '%s_attn_model_stage_%d.png' % (save_name, attention_model_index)

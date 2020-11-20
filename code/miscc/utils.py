@@ -36,13 +36,13 @@ def drawCaption(convas, captions, ixtoword, vis_size, off1=2, off2=2):
     d = ImageDraw.Draw(img_txt)
     sentence_list = []
     for i in range(num):
-        cap = captions[i].data.cpu().numpy()
+        current_caption = captions[i].data.cpu().numpy()
         sentence = []
-        for j in range(len(cap)):
-            if cap[j] == 0:
+        for word_index in range(len(current_caption)):
+            if current_caption[word_index] == 0:
                 break
-            word = ixtoword[cap[j]].encode('ascii', 'ignore').decode('ascii')
-            d.text(((j + off1) * (vis_size + off2), i * FONT_MAX), '%d:%s' % (j, word[:6]),
+            word = ixtoword[current_caption[word_index]].encode('ascii', 'ignore').decode('ascii')
+            d.text(((word_index + off1) * (vis_size + off2), i * FONT_MAX), '%d:%s' % (word_index, word[:6]),
                    font=fnt, fill=(255, 255, 255, 255))
             sentence.append(word)
         sentence_list.append(sentence)
@@ -174,8 +174,8 @@ def build_super_images(real_imgs, captions, ixtoword,
         return None
 
 
-def build_super_images2(real_imgs, captions, cap_lens, ixtoword,
-                        attn_maps, att_sze, vis_size=256, topK=5):
+def decode_attention_maps(real_imgs, captions, cap_lens, ixtoword,
+                          attn_maps, att_sze, vis_size=256, top_k_most_attended=5):
     batch_size = real_imgs.size(0)
     max_word_num = np.max(cap_lens)
     text_convas = np.ones([batch_size * FONT_MAX,
@@ -216,11 +216,11 @@ def build_super_images2(real_imgs, captions, cap_lens, ixtoword,
         row_merge = []
         row_txt = []
         row_beforeNorm = []
-        conf_score = []
+        matching_score = []
         for j in range(num_attn):
             one_map = attn[j]
             mask0 = one_map > (2. * thresh)
-            conf_score.append(np.sum(one_map * mask0))
+            matching_score.append(np.sum(one_map * mask0))
             mask = one_map > thresh
             one_map = one_map * mask
             if (vis_size // att_sze) > 1:
@@ -232,7 +232,7 @@ def build_super_images2(real_imgs, captions, cap_lens, ixtoword,
             maxV = one_map.max()
             one_map = (one_map - minV) / (maxV - minV)
             row_beforeNorm.append(one_map)
-        sorted_indices = np.argsort(conf_score)[::-1]
+        sorted_indices = np.argsort(matching_score)[::-1]
 
         for j in range(num_attn):
             one_map = row_beforeNorm[j]
@@ -263,9 +263,9 @@ def build_super_images2(real_imgs, captions, cap_lens, ixtoword,
             row_new.append(row[idx])
             row_merge_new.append(row_merge[idx])
             txt_new.append(row_txt[idx])
-        row = np.concatenate(row_new[:topK], 1)
-        row_merge = np.concatenate(row_merge_new[:topK], 1)
-        txt = np.concatenate(txt_new[:topK], 1)
+        row = np.concatenate(row_new[:top_k_most_attended], 1)
+        row_merge = np.concatenate(row_merge_new[:top_k_most_attended], 1)
+        txt = np.concatenate(txt_new[:top_k_most_attended], 1)
         if txt.shape[1] != row.shape[1]:
             print(('Warnings: txt', txt.shape, 'row', row.shape,
                    'row_merge_new', row_merge_new.shape))
