@@ -1,3 +1,5 @@
+from typing import Dict, List
+
 from miscc.config import cfg, cfg_from_file
 from datasets import TextDataset
 from trainer import condGANTrainer as trainer
@@ -15,6 +17,8 @@ import numpy as np
 import torch
 import torchvision.transforms as transforms
 
+from attnganw.text import TextProcessor
+
 dir_path = (os.path.abspath(os.path.join(os.path.realpath(__file__), './.')))
 sys.path.append(dir_path)
 
@@ -31,7 +35,7 @@ def parse_args():
     return args
 
 
-def gen_example(wordtoix, algo):
+def gen_example(wordtoix: Dict[str, int], algo):
     '''generate images from example sentences'''
     from nltk.tokenize import RegexpTokenizer
     filepath = '%s/example_filenames.txt' % (cfg.DATA_DIR)
@@ -46,25 +50,16 @@ def gen_example(wordtoix, algo):
                 print('Load examples from:', name)
                 sentences = f.read().split('\n')
                 # a list of indices for a sentence
-                captions = []
-                cap_lens = []
-                for sent in sentences:
-                    if len(sent) == 0:
-                        continue
-                    sent = sent.replace("\\ufffd\\ufffd", " ")
-                    tokenizer = RegexpTokenizer(r'\w+')
-                    tokens = tokenizer.tokenize(sent.lower())
-                    if len(tokens) == 0:
-                        print('sent', sent)
-                        continue
+                captions: List[List[int]] = []
+                cap_lens: List[int] = []
 
-                    rev = []
-                    for t in tokens:
-                        t = t.encode('ascii', 'ignore').decode('ascii')
-                        if len(t) > 0 and t in wordtoix:
-                            rev.append(wordtoix[t])
-                    captions.append(rev)
-                    cap_lens.append(len(rev))
+                text_processor: TextProcessor = TextProcessor(word_to_index=wordtoix)
+                for sent in sentences:
+
+                    rev: List[int] = text_processor.to_number_vector(text_to_encode=sent)
+                    if len(rev) > 0:
+                        captions.append(rev)
+                        cap_lens.append(len(rev))
             max_len = np.max(cap_lens)
 
             sorted_indices = np.argsort(cap_lens)[::-1]

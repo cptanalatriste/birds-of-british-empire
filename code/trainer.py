@@ -18,8 +18,10 @@ from model import RNN_ENCODER, CNN_ENCODER
 from six.moves import range
 from torch.autograd import Variable
 
-
 # ################# Text to image task############################ #
+from attnganw.image import ImageDecoder
+
+
 class condGANTrainer(object):
     def __init__(self, output_dir, data_loader, n_words, ixtoword):
         if cfg.TRAIN.FLAG:
@@ -28,7 +30,8 @@ class condGANTrainer(object):
             mkdir_p(self.model_dir)
             mkdir_p(self.image_dir)
 
-        torch.cuda.set_device(cfg.GPU_ID)
+        if cfg.GPU_ID >= 0:
+            torch.cuda.set_device(cfg.GPU_ID)
         cudnn.benchmark = True
 
         self.batch_size = cfg.TRAIN.BATCH_SIZE
@@ -486,38 +489,31 @@ class condGANTrainer(object):
                     # (2) Generate fake images
                     ######################################################
                     noise.data.normal_(0, 1)
-                    fake_imgs, attention_maps, _, _ = netG(noise, sent_emb, words_embs, mask)
+                    generated_images, attention_maps, _, _ = netG(noise, sent_emb, words_embs, mask)
                     # G attention
                     cap_lens_np = cap_lens.cpu().data.numpy()
-                    for j in range(batch_size):
-                        save_name = '%s/%d_s_%d' % (save_dir, i, sorted_indices[j])
-                        for k in range(len(fake_imgs)):
-                            im = fake_imgs[k][j].data.cpu().numpy()
-                            im = (im + 1.0) * 127.5
-                            im = im.astype(np.uint8)
-                            # print('im', im.shape)
-                            im = np.transpose(im, (1, 2, 0))
-                            # print('im', im.shape)
-                            im = Image.fromarray(im)
-                            fullpath = '%s_g%d.png' % (save_name, k)
-                            im.save(fullpath)
-                            print("Fake image saved at ", fullpath)
 
-                        for k in range(len(attention_maps)):
-                            if len(fake_imgs) > 1:
-                                im = fake_imgs[k + 1].detach().cpu()
+                    image_decoder: ImageDecoder = ImageDecoder()
+                    for batch_index in range(batch_size):
+
+                        save_name = '%s/%d_s_%d' % (save_dir, i, sorted_indices[batch_index])
+                        image_decoder.decode_generated_images(batch_index=batch_index, file_prefix=save_name,
+                                                              generated_images=generated_images)
+
+                        for attention_model_index in range(len(attention_maps)):
+                            if len(generated_images) > 1:
+                                im = generated_images[attention_model_index + 1].detach().cpu()
                             else:
-                                im = fake_imgs[0].detach().cpu()
-                            attn_maps = attention_maps[k]
+                                im = generated_images[0].detach().cpu()
+                            attn_maps = attention_maps[attention_model_index]
                             att_sze = attn_maps.size(2)
                             img_set, sentences = \
-                                build_super_images2(im[j].unsqueeze(0),
-                                                    captions[j].unsqueeze(0),
-                                                    [cap_lens_np[j]], self.ixtoword,
-                                                    [attn_maps[j]], att_sze)
+                                build_super_images2(im[batch_index].unsqueeze(0),
+                                                    captions[batch_index].unsqueeze(0),
+                                                    [cap_lens_np[batch_index]], self.ixtoword,
+                                                    [attn_maps[batch_index]], att_sze)
                             if img_set is not None:
                                 im = Image.fromarray(img_set)
-                                fullpath = '%s_a%d.png' % (save_name, k)
-
+                                fullpath = '%s_attn_model_stage_%d.png' % (save_name, attention_model_index)
                                 print("Attention map saved at ", fullpath)
                                 im.save(fullpath)
