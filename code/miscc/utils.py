@@ -1,5 +1,7 @@
 import os
 import errno
+from typing import List
+
 import numpy as np
 from torch.nn import init
 
@@ -13,6 +15,8 @@ import skimage.transform
 from miscc.config import cfg
 
 # For visualization ################################################
+from attnganw.text import TextProcessor
+
 COLOR_DIC = {0: [128, 64, 128], 1: [244, 35, 232],
              2: [70, 70, 70], 3: [102, 102, 156],
              4: [190, 153, 153], 5: [153, 153, 153],
@@ -35,17 +39,18 @@ def drawCaption(convas, captions, ixtoword, vis_size, off1=2, off2=2):
     # get a drawing context
     d = ImageDraw.Draw(img_txt)
     sentence_list = []
-    for i in range(num):
-        current_caption = captions[i].data.cpu().numpy()
-        sentence = []
-        for word_index in range(len(current_caption)):
-            if current_caption[word_index] == 0:
-                break
-            word = ixtoword[current_caption[word_index]].encode('ascii', 'ignore').decode('ascii')
-            d.text(((word_index + off1) * (vis_size + off2), i * FONT_MAX), '%d:%s' % (word_index, word[:6]),
-                   font=fnt, fill=(255, 255, 255, 255))
-            sentence.append(word)
+
+    text_processor: TextProcessor = TextProcessor(index_to_word=ixtoword)
+    for caption_index in range(num):
+        current_caption = captions[caption_index].data.cpu().numpy()
+        sentence: List[str] = text_processor.to_word_vector(number_vector=current_caption)
         sentence_list.append(sentence)
+
+        for word_index in range(len(sentence)):
+            word: str = sentence[word_index]
+            d.text(((word_index + off1) * (vis_size + off2), caption_index * FONT_MAX),
+                   '%d:%s' % (word_index, word[:6]),
+                   font=fnt, fill=(255, 255, 255, 255))
     return img_txt, sentence_list
 
 

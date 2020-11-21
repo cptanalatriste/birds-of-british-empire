@@ -20,6 +20,7 @@ from torch.autograd import Variable
 
 # ################# Text to image task############################ #
 from attnganw.image import ImageDecoder
+from attnganw.model import TextEncoderWrapper, GenerativeNetworkWrapper
 
 
 class condGANTrainer(object):
@@ -436,37 +437,24 @@ class condGANTrainer(object):
             print('Error: the path for morels is not found!')
         else:
             # Build and load the generator
-            text_encoder = \
-                RNN_ENCODER(self.n_words, nhidden=cfg.TEXT.EMBEDDING_DIM)
-            state_dict = \
-                torch.load(cfg.TRAIN.NET_E, map_location=lambda storage, loc: storage)
-            text_encoder.load_state_dict(state_dict)
-            print('Load text encoder from:', cfg.TRAIN.NET_E)
-            if cfg.GPU_ID >= 0:
-                text_encoder = text_encoder.cuda()
-            text_encoder.eval()
+            text_encoder_wrapper: TextEncoderWrapper = TextEncoderWrapper(vocabulary_size=self.n_words,
+                                                                          text_embedding_size=cfg.TEXT.EMBEDDING_DIM,
+                                                                          state_dict_location=cfg.TRAIN.NET_E)
+            text_encoder_wrapper.start_evaluation_mode(cfg.GPU_ID)
 
+            gen_network_wrapper: GenerativeNetworkWrapper = GenerativeNetworkWrapper(is_dc_gan=cfg.GAN.B_DCGAN,
+                                                                                     state_dict_location=cfg.TRAIN.NET_G)
+            gen_network_wrapper.start_evaluation_mode(gpu_id=cfg.GPU_ID)
             # the path to save generated images
-            if cfg.GAN.B_DCGAN:
-                netG = G_DCGAN()
-            else:
-                netG = G_NET()
             s_tmp = cfg.TRAIN.NET_G[:cfg.TRAIN.NET_G.rfind('.pth')]
-            model_dir = cfg.TRAIN.NET_G
-            state_dict = \
-                torch.load(model_dir, map_location=lambda storage, loc: storage)
-            netG.load_state_dict(state_dict)
-            print('Load G from: ', model_dir)
-            if cfg.GPU_ID >= 0:
-                netG.cuda()
-            netG.eval()
+
             for key in data_dic:
                 save_dir = '%s/%s' % (s_tmp, key)
                 mkdir_p(save_dir)
                 captions, cap_lens, sorted_indices = data_dic[key]
 
                 batch_size = captions.shape[0]
-                nz = cfg.GAN.Z_DIM
+                noise_vector_size = cfg.GAN.Z_DIM
                 captions = Variable(torch.from_numpy(captions), volatile=True)
                 cap_lens = Variable(torch.from_numpy(cap_lens), volatile=True)
 
@@ -474,22 +462,21 @@ class condGANTrainer(object):
                     captions = captions.cuda()
                     cap_lens = cap_lens.cuda()
                 for i in range(1):  # 16
-                    noise = Variable(torch.FloatTensor(batch_size, nz), volatile=True)
+                    noise = Variable(torch.FloatTensor(batch_size, noise_vector_size), volatile=True)
                     if cfg.GPU_ID >= 0:
                         noise = noise.cuda()
-                    #######################################################
-                    # (1) Extract text embeddings
-                    ######################################################
-                    hidden = text_encoder.init_hidden(batch_size)
-                    # words_embs: batch_size x nef x seq_len
-                    # sent_emb: batch_size x nef
-                    words_embs, sent_emb = text_encoder(captions, cap_lens, hidden)
+
+                    word_features, sentence_features = text_encoder_wrapper.extract_semantic_vectors(
+                        text_descriptions=captions,
+                        description_sizes=cap_lens)
                     mask = (captions == 0)
-                    #######################################################
-                    # (2) Generate fake images
-                    ######################################################
-                    noise.data.normal_(0, 1)
-                    generated_images, attention_maps, _, _ = netG(noise, sent_emb, words_embs, mask)
+
+                    generated_images, attention_maps = gen_network_wrapper. \
+                        generate_images(noise_vector=noise,
+                                        word_features=word_features,
+                                        sentence_features=sentence_features,
+                                        mask=mask)
+
                     # G attention
                     cap_lens_np = cap_lens.cpu().data.numpy()
 
