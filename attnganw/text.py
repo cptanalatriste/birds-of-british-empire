@@ -2,6 +2,7 @@ from typing import List, Dict
 
 from nltk import RegexpTokenizer
 import numpy as np
+import logging
 
 
 class TextProcessor:
@@ -28,6 +29,7 @@ class TextProcessor:
             if len(token) > 0 and token in self.word_to_index:
                 number_vector.append(self.word_to_index[token])
 
+        logging.debug("Input sentence " + text_to_encode + " Number vector " + str(number_vector))
         return number_vector
 
     def to_word_vector(self, number_vector: np.ndarray) -> List[str]:

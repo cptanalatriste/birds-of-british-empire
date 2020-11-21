@@ -17,6 +17,7 @@ import numpy as np
 import torch
 import torchvision.transforms as transforms
 
+import logging
 from attnganw.text import TextProcessor
 
 dir_path = (os.path.abspath(os.path.join(os.path.realpath(__file__), './.')))
@@ -36,8 +37,9 @@ def parse_args():
 
 
 def gen_example(wordtoix: Dict[str, int], algo):
+    logging.basicConfig(level=logging.DEBUG)
+
     '''generate images from example sentences'''
-    from nltk.tokenize import RegexpTokenizer
     filepath = '%s/example_filenames.txt' % (cfg.DATA_DIR)
     data_dic = {}
     with open(filepath, "r") as f:
@@ -73,7 +75,7 @@ def gen_example(wordtoix: Dict[str, int], algo):
                 cap_array[i, :c_len] = cap
             key = name[(name.rfind('/') + 1):]
             data_dic[key] = [cap_array, cap_lens, sorted_indices]
-    algo.gen_example(data_dic)
+    algo.generate_examples(data_dic)
 
 
 if __name__ == "__main__":

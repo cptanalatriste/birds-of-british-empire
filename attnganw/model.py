@@ -5,6 +5,7 @@ import torch.nn as nn
 from model import RNN_ENCODER, G_DCGAN, G_NET
 import torch
 from torch import Tensor
+import logging
 
 
 class TextEncoderWrapper:
@@ -24,6 +25,8 @@ class TextEncoderWrapper:
         self.text_encoder.eval()
 
     def extract_semantic_vectors(self, text_descriptions: Tensor, description_sizes: Tensor) -> Tuple[Tensor, Tensor]:
+        logging.debug("text_descriptions " + str(text_descriptions) + " description_sizes " + str(description_sizes))
+
         batch_size: int = text_descriptions.shape[0]
 
         hidden: Tensor = self.text_encoder.init_hidden(batch_size)
@@ -31,6 +34,9 @@ class TextEncoderWrapper:
                                                              cap_lens=description_sizes,
                                                              hidden=hidden)
 
+        logging.debug(
+            "word_features.shape " + str(word_features.shape) + " sentence_features.shape " + str(
+                sentence_features.shape))
         return word_features, sentence_features
 
 
@@ -59,6 +65,8 @@ class GenerativeNetworkWrapper:
                         mask) -> Tuple[Tensor, Tensor]:
 
         noise_vector.data.normal_(mean=0, std=1)
+
+        logging.debug("noise_vector.shape " + str(noise_vector.shape))
         generated_images, attention_maps, _, _ = self.generative_network(z_code=noise_vector,
                                                                          sent_emb=sentence_features,
                                                                          word_embs=word_features,

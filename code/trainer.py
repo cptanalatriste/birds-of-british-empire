@@ -432,7 +432,7 @@ class condGANTrainer(object):
                         fullpath = '%s_s%d.png' % (s_tmp, k)
                         im.save(fullpath)
 
-    def gen_example(self, data_dic):
+    def generate_examples(self, data_dic):
         if cfg.TRAIN.NET_G == '':
             print('Error: the path for morels is not found!')
         else:
@@ -442,66 +442,54 @@ class condGANTrainer(object):
                                                                           state_dict_location=cfg.TRAIN.NET_E)
             text_encoder_wrapper.start_evaluation_mode(cfg.GPU_ID)
 
-            gen_network_wrapper: GenerativeNetworkWrapper = GenerativeNetworkWrapper(is_dc_gan=cfg.GAN.B_DCGAN,
-                                                                                     state_dict_location=cfg.TRAIN.NET_G)
+            gen_network_wrapper: GenerativeNetworkWrapper = \
+                GenerativeNetworkWrapper(is_dc_gan=cfg.GAN.B_DCGAN,
+                                         state_dict_location=cfg.TRAIN.NET_G)
             gen_network_wrapper.start_evaluation_mode(gpu_id=cfg.GPU_ID)
             # the path to save generated images
             s_tmp = cfg.TRAIN.NET_G[:cfg.TRAIN.NET_G.rfind('.pth')]
 
-            for key in data_dic:
-                save_dir = '%s/%s' % (s_tmp, key)
-                mkdir_p(save_dir)
-                captions, cap_lens, sorted_indices = data_dic[key]
+            with torch.no_grad():
+                for key in data_dic:
+                    save_dir = '%s/%s' % (s_tmp, key)
+                    mkdir_p(save_dir)
+                    captions, cap_lens, sorted_indices = data_dic[key]
 
-                batch_size = captions.shape[0]
-                noise_vector_size = cfg.GAN.Z_DIM
-                captions = Variable(torch.from_numpy(captions), volatile=True)
-                cap_lens = Variable(torch.from_numpy(cap_lens), volatile=True)
+                    batch_size = captions.shape[0]
+                    noise_vector_size = cfg.GAN.Z_DIM
+                    captions = torch.from_numpy(captions)
+                    cap_lens = torch.from_numpy(cap_lens)
 
-                if cfg.GPU_ID >= 0:
-                    captions = captions.cuda()
-                    cap_lens = cap_lens.cuda()
-                for i in range(1):  # 16
-                    noise = Variable(torch.FloatTensor(batch_size, noise_vector_size), volatile=True)
                     if cfg.GPU_ID >= 0:
-                        noise = noise.cuda()
+                        captions = captions.cuda()
+                        cap_lens = cap_lens.cuda()
+                    for i in range(1):  # 16
+                        noise = torch.FloatTensor(batch_size, noise_vector_size)
+                        if cfg.GPU_ID >= 0:
+                            noise = noise.cuda()
 
-                    word_features, sentence_features = text_encoder_wrapper.extract_semantic_vectors(
-                        text_descriptions=captions,
-                        description_sizes=cap_lens)
-                    mask = (captions == 0)
+                        word_features, sentence_features = text_encoder_wrapper.extract_semantic_vectors(
+                            text_descriptions=captions,
+                            description_sizes=cap_lens)
+                        mask = (captions == 0)
 
-                    generated_images, attention_maps = gen_network_wrapper. \
-                        generate_images(noise_vector=noise,
-                                        word_features=word_features,
-                                        sentence_features=sentence_features,
-                                        mask=mask)
+                        generated_images, attention_maps = gen_network_wrapper. \
+                            generate_images(noise_vector=noise,
+                                            word_features=word_features,
+                                            sentence_features=sentence_features,
+                                            mask=mask)
 
-                    # G attention
-                    cap_lens_np = cap_lens.cpu().data.numpy()
+                        # G attention
+                        cap_lens_np = cap_lens.cpu().data.numpy()
 
-                    image_decoder: ImageDecoder = ImageDecoder()
-                    for batch_index in range(batch_size):
+                        image_decoder: ImageDecoder = ImageDecoder()
+                        for batch_index in range(batch_size):
+                            save_name = '%s/%d_caption_%d' % (save_dir, i, sorted_indices[batch_index])
+                            image_decoder.decode_generated_images(batch_index=batch_index, file_prefix=save_name,
+                                                                  generated_images=generated_images)
 
-                        save_name = '%s/%d_s_%d' % (save_dir, i, sorted_indices[batch_index])
-                        image_decoder.decode_generated_images(batch_index=batch_index, file_prefix=save_name,
-                                                              generated_images=generated_images)
-
-                        for attention_model_index in range(len(attention_maps)):
-                            if len(generated_images) > 1:
-                                im = generated_images[attention_model_index + 1].detach().cpu()
-                            else:
-                                im = generated_images[0].detach().cpu()
-                            attn_maps = attention_maps[attention_model_index]
-                            att_sze = attn_maps.size(2)
-                            img_set, sentences = \
-                                decode_attention_maps(im[batch_index].unsqueeze(0),
-                                                      captions[batch_index].unsqueeze(0),
-                                                      [cap_lens_np[batch_index]], self.ixtoword,
-                                                      [attn_maps[batch_index]], att_sze,
-                                                      top_k_most_attended=5)
-                            if img_set is not None:
-                                im = Image.fromarray(img_set)
-                                fullpath = '%s_attn_model_stage_%d.png' % (save_name, attention_model_index)
-                                print("Attention map saved at ", fullpath)
-                                im.save(fullpath)
+                            image_decoder.decode_attention_maps(batch_index=batch_index, file_prefix=save_name,
+                                                                attention_maps=attention_maps,
+                                                                generated_images=generated_images,
+                                                                captions=captions, caption_lenghts=cap_lens_np,
+                                                                index_to_word=self.ixtoword)

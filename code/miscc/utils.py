@@ -179,44 +179,44 @@ def build_super_images(real_imgs, captions, ixtoword,
         return None
 
 
-def decode_attention_maps(real_imgs, captions, cap_lens, ixtoword,
-                          attn_maps, att_sze, vis_size=256, top_k_most_attended=5):
-    batch_size = real_imgs.size(0)
-    max_word_num = np.max(cap_lens)
+def decode_attention_maps(batch_images, batch_captions, caption_lengths, index_to_word,
+                          attention_maps, attention_map_size, vis_size=256, top_k_most_attended=5):
+    batch_size = batch_images.size(0)
+    max_word_num = np.max(caption_lengths)
     text_convas = np.ones([batch_size * FONT_MAX,
                            max_word_num * (vis_size + 2), 3],
                           dtype=np.uint8)
 
-    real_imgs = \
-        nn.Upsample(size=(vis_size, vis_size), mode='bilinear')(real_imgs)
+    batch_images = \
+        nn.Upsample(size=(vis_size, vis_size), mode='bilinear')(batch_images)
     # [-1, 1] --> [0, 1]
-    real_imgs.add_(1).div_(2).mul_(255)
-    real_imgs = real_imgs.data.numpy()
+    batch_images.add_(1).div_(2).mul_(255)
+    batch_images = batch_images.data.numpy()
     # b x c x h x w --> b x h x w x c
-    real_imgs = np.transpose(real_imgs, (0, 2, 3, 1))
-    pad_sze = real_imgs.shape
+    batch_images = np.transpose(batch_images, (0, 2, 3, 1))
+    pad_sze = batch_images.shape
     middle_pad = np.zeros([pad_sze[2], 2, 3])
 
     # batch x seq_len x 17 x 17 --> batch x 1 x 17 x 17
     img_set = []
-    num = len(attn_maps)
+    num = len(attention_maps)
 
     text_map, sentences = \
-        drawCaption(text_convas, captions, ixtoword, vis_size, off1=0)
+        drawCaption(text_convas, batch_captions, index_to_word, vis_size, off1=0)
     text_map = np.asarray(text_map).astype(np.uint8)
 
     bUpdate = 1
     for i in range(num):
-        attn = attn_maps[i].cpu().view(1, -1, att_sze, att_sze)
+        attn = attention_maps[i].cpu().view(1, -1, attention_map_size, attention_map_size)
         #
-        attn = attn.view(-1, 1, att_sze, att_sze)
+        attn = attn.view(-1, 1, attention_map_size, attention_map_size)
         attn = attn.repeat(1, 3, 1, 1).data.numpy()
         # n x c x h x w --> n x h x w x c
         attn = np.transpose(attn, (0, 2, 3, 1))
-        num_attn = cap_lens[i]
+        num_attn = caption_lengths[i]
         thresh = 2. / float(num_attn)
         #
-        img = real_imgs[i]
+        img = batch_images[i]
         row = []
         row_merge = []
         row_txt = []
@@ -228,10 +228,10 @@ def decode_attention_maps(real_imgs, captions, cap_lens, ixtoword,
             matching_score.append(np.sum(one_map * mask0))
             mask = one_map > thresh
             one_map = one_map * mask
-            if (vis_size // att_sze) > 1:
+            if (vis_size // attention_map_size) > 1:
                 one_map = \
                     skimage.transform.pyramid_expand(one_map, sigma=20,
-                                                     upscale=vis_size // att_sze,
+                                                     upscale=vis_size // attention_map_size,
                                                      multichannel=True)
             minV = one_map.min()
             maxV = one_map.max()
