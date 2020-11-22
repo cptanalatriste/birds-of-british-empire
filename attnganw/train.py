@@ -1,6 +1,8 @@
 from typing import Dict, List
 import logging
 
+import torch
+from torch import Tensor
 from torch.utils.data import DataLoader
 import numpy as np
 
@@ -37,46 +39,59 @@ class GanTrainerWrapper:
         self.gan_trainer.sampling(self.data_split)
 
     def generate_examples(self, data_directory: str):
-        generate_examples(self.word_to_index, self.gan_trainer, data_directory)
+        logging.basicConfig(level=logging.DEBUG)
+        text_processor: TextProcessor = TextProcessor(word_to_index=self.word_to_index)
+
+        captions_per_file: Dict[str, List] = directory_to_trainer_input(data_directory=data_directory,
+                                                                        text_processor=text_processor)
+
+        self.gan_trainer.generate_examples(captions_per_file=captions_per_file,
+                                           noise_vector_generator=get_single_noise_vector)
 
 
-def generate_examples(word_to_index: Dict[str, int], gan_trainer: condGANTrainer, data_directory: str):
-    logging.basicConfig(level=logging.DEBUG)
+def get_single_noise_vector(batch_size: int, noise_vector_size: int, gpu_id: int) -> List[Tensor]:
+    noise_vector = torch.FloatTensor(batch_size, noise_vector_size)
+    if gpu_id >= 0:
+        noise_vector = noise_vector.cuda()
+    noise_vector.data.normal_(mean=0, std=1)
 
+    return [noise_vector]
+
+
+def directory_to_trainer_input(data_directory: str, text_processor: TextProcessor) -> Dict[str, List]:
     '''generate images from example sentences'''
     filepath = '%s/example_filenames.txt' % data_directory
-    data_dic = {}
+    captions_per_file: Dict[str, List] = {}
     with open(filepath, "r") as f:
         filenames = f.read().split('\n')
-        for name in filenames:
-            if len(name) == 0:
+        for file_name in filenames:
+            if len(file_name) == 0:
                 continue
-            filepath = '%s/%s.txt' % (data_directory, name)
+            filepath = '%s/%s.txt' % (data_directory, file_name)
             with open(filepath, "r") as f:
-                print('Load examples from:', name)
+                print('Load examples from:', file_name)
                 sentences = f.read().split('\n')
                 # a list of indices for a sentence
                 captions: List[List[int]] = []
-                cap_lens: List[int] = []
+                caption_lengths: List[int] = []
 
-                text_processor: TextProcessor = TextProcessor(word_to_index=word_to_index)
                 for sent in sentences:
 
                     rev: List[int] = text_processor.to_number_vector(text_to_encode=sent)
                     if len(rev) > 0:
                         captions.append(rev)
-                        cap_lens.append(len(rev))
-            max_len = np.max(cap_lens)
+                        caption_lengths.append(len(rev))
+            max_len = np.max(caption_lengths)
 
-            sorted_indices = np.argsort(cap_lens)[::-1]
-            cap_lens = np.asarray(cap_lens)
-            cap_lens = cap_lens[sorted_indices]
+            sorted_indices = np.argsort(caption_lengths)[::-1]
+            caption_lengths = np.asarray(caption_lengths)
+            caption_lengths = caption_lengths[sorted_indices]
             cap_array = np.zeros((len(captions), max_len), dtype='int64')
             for i in range(len(captions)):
                 idx = sorted_indices[i]
                 cap = captions[idx]
                 c_len = len(cap)
                 cap_array[i, :c_len] = cap
-            key = name[(name.rfind('/') + 1):]
-            data_dic[key] = [cap_array, cap_lens, sorted_indices]
-    gan_trainer.generate_examples(data_dic)
+            file_as_key = file_name[(file_name.rfind('/') + 1):]
+            captions_per_file[file_as_key] = [cap_array, caption_lengths, sorted_indices]
+    return captions_per_file

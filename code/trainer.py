@@ -1,5 +1,6 @@
 import os
 import time
+from typing import Dict, List
 
 import numpy as np
 import torch
@@ -10,7 +11,7 @@ from datasets import prepare_data
 from miscc.config import cfg
 from miscc.losses import discriminator_loss, generator_loss, KL_loss
 from miscc.losses import words_loss
-from miscc.utils import build_super_images, decode_attention_maps
+from miscc.utils import build_super_images
 from miscc.utils import mkdir_p
 from miscc.utils import weights_init, load_params, copy_G_params
 from model import G_DCGAN, G_NET
@@ -432,7 +433,7 @@ class condGANTrainer(object):
                         fullpath = '%s_s%d.png' % (s_tmp, k)
                         im.save(fullpath)
 
-    def generate_examples(self, data_dic):
+    def generate_examples(self, captions_per_file: Dict[str, List], noise_vector_generator):
         if cfg.TRAIN.NET_G == '':
             print('Error: the path for morels is not found!')
         else:
@@ -450,42 +451,41 @@ class condGANTrainer(object):
             s_tmp = cfg.TRAIN.NET_G[:cfg.TRAIN.NET_G.rfind('.pth')]
 
             with torch.no_grad():
-                for key in data_dic:
-                    save_dir = '%s/%s' % (s_tmp, key)
+                for file_as_key in captions_per_file:
+                    save_dir = '%s/%s' % (s_tmp, file_as_key)
                     mkdir_p(save_dir)
-                    captions, cap_lens, sorted_indices = data_dic[key]
+                    captions, caption_lengths, sorted_indices = captions_per_file[file_as_key]
 
                     batch_size = captions.shape[0]
-                    noise_vector_size = cfg.GAN.Z_DIM
                     captions = torch.from_numpy(captions)
-                    cap_lens = torch.from_numpy(cap_lens)
+                    caption_lengths = torch.from_numpy(caption_lengths)
 
                     if cfg.GPU_ID >= 0:
                         captions = captions.cuda()
-                        cap_lens = cap_lens.cuda()
-                    for i in range(1):  # 16
-                        noise = torch.FloatTensor(batch_size, noise_vector_size)
-                        if cfg.GPU_ID >= 0:
-                            noise = noise.cuda()
+                        caption_lengths = caption_lengths.cuda()
+
+                    for noise_vector_index, noise_vector in enumerate(noise_vector_generator(batch_size=batch_size,
+                                                                                             noise_vector_size=cfg.GAN.Z_DIM,
+                                                                                             gpu_id=cfg.GPU_ID)):
 
                         word_features, sentence_features = text_encoder_wrapper.extract_semantic_vectors(
                             text_descriptions=captions,
-                            description_sizes=cap_lens)
+                            description_sizes=caption_lengths)
                         mask = (captions == 0)
 
-                        noise.data.normal_(mean=0, std=1)
                         generated_images, attention_maps = gen_network_wrapper. \
-                            generate_images(noise_vector=noise,
+                            generate_images(noise_vector=noise_vector,
                                             word_features=word_features,
                                             sentence_features=sentence_features,
                                             mask=mask)
 
                         # G attention
-                        cap_lens_np = cap_lens.cpu().data.numpy()
+                        cap_lens_np = caption_lengths.cpu().data.numpy()
 
                         image_decoder: ImageDecoder = ImageDecoder()
                         for batch_index in range(batch_size):
-                            save_name = '%s/%d_caption_%d' % (save_dir, i, sorted_indices[batch_index])
+                            save_name = '%s/vector_%d_caption_%d' % (save_dir, noise_vector_index,
+                                                                     sorted_indices[batch_index])
                             image_decoder.decode_generated_images(batch_index=batch_index, file_prefix=save_name,
                                                                   generated_images=generated_images)
 
