@@ -45,8 +45,10 @@ class GanTrainerWrapper:
         captions_per_file: Dict[str, List] = directory_to_trainer_input(data_directory=data_directory,
                                                                         text_processor=text_processor)
 
+        # self.gan_trainer.generate_examples(captions_per_file=captions_per_file,
+        #                                    noise_vector_generator=get_single_noise_vector)
         self.gan_trainer.generate_examples(captions_per_file=captions_per_file,
-                                           noise_vector_generator=get_single_noise_vector)
+                                           noise_vector_generator=get_noise_interpolation)
 
 
 def get_single_noise_vector(batch_size: int, noise_vector_size: int, gpu_id: int) -> List[Tensor]:
@@ -58,19 +60,41 @@ def get_single_noise_vector(batch_size: int, noise_vector_size: int, gpu_id: int
     return [noise_vector]
 
 
+def get_noise_interpolation(batch_size: int, noise_vector_size: int, gpu_id: int,
+                            noise_vector_start: Tensor = None,
+                            noise_vector_end: Tensor = None,
+                            number_of_steps=4) -> List[Tensor]:
+    if noise_vector_start is None:
+        noise_vector_start: Tensor = torch.randn(batch_size, noise_vector_size, dtype=torch.float)
+
+    if noise_vector_end is None:
+        noise_vector_end: Tensor = torch.randn(batch_size, noise_vector_size, dtype=torch.float)
+
+    noise_vectors: List[Tensor] = []
+    for vector_index in range(number_of_steps + 1):
+        ratio: float = vector_index / float(number_of_steps)
+        print("ratio " + str(ratio))
+        new_noise_vector: Tensor = noise_vector_start * (1 - ratio) + noise_vector_end * ratio
+        if gpu_id >= 0:
+            new_noise_vector = new_noise_vector.cuda()
+        noise_vectors.append(new_noise_vector)
+
+    return noise_vectors
+
+
 def directory_to_trainer_input(data_directory: str, text_processor: TextProcessor) -> Dict[str, List]:
-    '''generate images from example sentences'''
-    filepath = '%s/example_filenames.txt' % data_directory
+    """generate images from example sentences"""
+    list_of_files_path = '%s/example_filenames.txt' % data_directory
     captions_per_file: Dict[str, List] = {}
-    with open(filepath, "r") as f:
-        filenames = f.read().split('\n')
+    with open(list_of_files_path, "r") as list_file:
+        filenames = list_file.read().split('\n')
         for file_name in filenames:
             if len(file_name) == 0:
                 continue
-            filepath = '%s/%s.txt' % (data_directory, file_name)
-            with open(filepath, "r") as f:
+            file_path = '%s/%s.txt' % (data_directory, file_name)
+            with open(file_path, "r") as file:
                 print('Load examples from:', file_name)
-                sentences = f.read().split('\n')
+                sentences = file.read().split('\n')
                 # a list of indices for a sentence
                 captions: List[List[int]] = []
                 caption_lengths: List[int] = []
