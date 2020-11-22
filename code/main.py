@@ -2,7 +2,6 @@ from typing import Dict, List
 
 from miscc.config import cfg, cfg_from_file
 from datasets import TextDataset
-from trainer import condGANTrainer as trainer
 
 import os
 import sys
@@ -17,8 +16,7 @@ import numpy as np
 import torch
 import torchvision.transforms as transforms
 
-import logging
-from attnganw.text import TextProcessor
+from attnganw.train import GanTrainerWrapper
 
 dir_path = (os.path.abspath(os.path.join(os.path.realpath(__file__), './.')))
 sys.path.append(dir_path)
@@ -34,48 +32,6 @@ def parse_args():
     parser.add_argument('--manualSeed', type=int, help='manual seed')
     args = parser.parse_args()
     return args
-
-
-def gen_example(wordtoix: Dict[str, int], algo):
-    logging.basicConfig(level=logging.DEBUG)
-
-    '''generate images from example sentences'''
-    filepath = '%s/example_filenames.txt' % (cfg.DATA_DIR)
-    data_dic = {}
-    with open(filepath, "r") as f:
-        filenames = f.read().split('\n')
-        for name in filenames:
-            if len(name) == 0:
-                continue
-            filepath = '%s/%s.txt' % (cfg.DATA_DIR, name)
-            with open(filepath, "r") as f:
-                print('Load examples from:', name)
-                sentences = f.read().split('\n')
-                # a list of indices for a sentence
-                captions: List[List[int]] = []
-                cap_lens: List[int] = []
-
-                text_processor: TextProcessor = TextProcessor(word_to_index=wordtoix)
-                for sent in sentences:
-
-                    rev: List[int] = text_processor.to_number_vector(text_to_encode=sent)
-                    if len(rev) > 0:
-                        captions.append(rev)
-                        cap_lens.append(len(rev))
-            max_len = np.max(cap_lens)
-
-            sorted_indices = np.argsort(cap_lens)[::-1]
-            cap_lens = np.asarray(cap_lens)
-            cap_lens = cap_lens[sorted_indices]
-            cap_array = np.zeros((len(captions), max_len), dtype='int64')
-            for i in range(len(captions)):
-                idx = sorted_indices[i]
-                cap = captions[idx]
-                c_len = len(cap)
-                cap_array[i, :c_len] = cap
-            key = name[(name.rfind('/') + 1):]
-            data_dic[key] = [cap_array, cap_lens, sorted_indices]
-    algo.generate_examples(data_dic)
 
 
 if __name__ == "__main__":
@@ -123,21 +79,24 @@ if __name__ == "__main__":
                           base_size=cfg.TREE.BASE_SIZE,
                           transform=image_transform)
     assert dataset
-    dataloader = torch.utils.data.DataLoader(
-        dataset, batch_size=cfg.TRAIN.BATCH_SIZE,
-        drop_last=True, shuffle=bshuffle, num_workers=int(cfg.WORKERS))
 
     # Define models and go to train/evaluate
-    algo = trainer(output_dir, dataloader, dataset.n_words, dataset.ixtoword)
+    gan_trainer_wrapper: GanTrainerWrapper = GanTrainerWrapper(output_directory=output_dir,
+                                                               text_data_set=dataset,
+                                                               batch_size=cfg.TRAIN.BATCH_SIZE,
+                                                               shuffle_data_loader=bshuffle,
+                                                               data_loader_workers=int(cfg.WORKERS),
+                                                               split_directory=split_dir)
 
     start_t = time.time()
     if cfg.TRAIN.FLAG:
-        algo.train()
+        gan_trainer_wrapper.train()
     else:
         '''generate images from pre-extracted embeddings'''
         if cfg.B_VALIDATION:
-            algo.sampling(split_dir)  # generate images for the whole valid dataset
+            gan_trainer_wrapper.sampling(split_dir)  # generate images for the whole valid dataset
         else:
-            gen_example(dataset.wordtoix, algo)  # generate images for customized captions
+            gan_trainer_wrapper.generate_examples(
+                data_directory=cfg.DATA_DIR)  # generate images for customized captions
     end_t = time.time()
     print('Total time for training:', end_t - start_t)

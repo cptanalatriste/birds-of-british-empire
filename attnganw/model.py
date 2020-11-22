@@ -64,8 +64,6 @@ class GenerativeNetworkWrapper:
     def generate_images(self, noise_vector: Tensor, word_features: Tensor, sentence_features: Tensor,
                         mask) -> Tuple[Tensor, Tensor]:
 
-        noise_vector.data.normal_(mean=0, std=1)
-
         logging.debug("noise_vector.shape " + str(noise_vector.shape))
         generated_images, attention_maps, _, _ = self.generative_network(z_code=noise_vector,
                                                                          sent_emb=sentence_features,

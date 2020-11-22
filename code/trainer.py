@@ -473,6 +473,7 @@ class condGANTrainer(object):
                             description_sizes=cap_lens)
                         mask = (captions == 0)
 
+                        noise.data.normal_(mean=0, std=1)
                         generated_images, attention_maps = gen_network_wrapper. \
                             generate_images(noise_vector=noise,
                                             word_features=word_features,
