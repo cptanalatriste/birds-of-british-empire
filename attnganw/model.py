@@ -65,9 +65,8 @@ class GenerativeNetworkWrapper:
                         mask) -> Tuple[Tensor, Tensor]:
 
         logging.debug("noise_vector.shape " + str(noise_vector.shape))
-        logging.debug("noise_vector " + str(noise_vector))
-        logging.debug("word_features " + str(word_features))
-        logging.debug("sentence_features " + str(sentence_features))
+        logging.debug("word_features.shape " + str(word_features.shape))
+        logging.debug("sentence_features.shape " + str(sentence_features.shape))
 
         generated_images, attention_maps, _, _ = self.generative_network(noise_vector=noise_vector,
                                                                          sentence_features=sentence_features,
