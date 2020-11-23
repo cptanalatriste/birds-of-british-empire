@@ -1,3 +1,4 @@
+from typing import List
 from unittest import TestCase
 
 import torch
@@ -15,11 +16,25 @@ class Test(TestCase):
         noise_vector_start: Tensor = torch.randn(batch_size, noise_vector_size, dtype=torch.float)
         noise_vector_end: Tensor = torch.randn(batch_size, noise_vector_size, dtype=torch.float)
 
-        vectors_for_interpolation = get_noise_interpolation(batch_size=batch_size, noise_vector_size=noise_vector_size,
-                                                            noise_vector_start=noise_vector_start,
-                                                            noise_vector_end=noise_vector_end,
-                                                            gpu_id=-1, number_of_steps=2)
+        number_of_steps: int = 4
+        initial_interpolation: List[Tensor] = get_noise_interpolation(batch_size=batch_size,
+                                                                      noise_vector_size=noise_vector_size,
+                                                                      noise_vector_start=noise_vector_start,
+                                                                      noise_vector_end=noise_vector_end,
+                                                                      gpu_id=-1, number_of_steps=number_of_steps)
 
-        self.assertEqual(len(vectors_for_interpolation), 3)
-        self.assertTrue(torch.equal(vectors_for_interpolation[0], noise_vector_start))
-        self.assertTrue(torch.equal(vectors_for_interpolation[2], noise_vector_end))
+        self.assertEqual(len(initial_interpolation), number_of_steps + 1)
+        self.assertTrue(torch.equal(initial_interpolation[0], noise_vector_start))
+        self.assertTrue(torch.equal(initial_interpolation[-1], noise_vector_end))
+
+        number_of_steps = number_of_steps * 2
+        second_interpolation: List[Tensor] = get_noise_interpolation(batch_size=batch_size,
+                                                                     noise_vector_size=noise_vector_size,
+                                                                     noise_vector_start=noise_vector_start,
+                                                                     noise_vector_end=noise_vector_end,
+                                                                     gpu_id=-1, number_of_steps=number_of_steps)
+
+        self.assertEqual(len(second_interpolation), number_of_steps + 1)
+        self.assertTrue(torch.equal(second_interpolation[0], noise_vector_start))
+        self.assertTrue(torch.equal(second_interpolation[-1], noise_vector_end))
+        self.assertFalse(torch.equal(second_interpolation[1], initial_interpolation[1]))

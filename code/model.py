@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.parallel
+from torch import Tensor
 from torch.autograd import Variable
 from torchvision import models
 import torch.utils.model_zoo as model_zoo
@@ -19,7 +20,7 @@ class GLU(nn.Module):
     def forward(self, x):
         nc = x.size(1)
         assert nc % 2 == 0, 'channels dont divide 2!'
-        nc = int(nc/2)
+        nc = int(nc / 2)
         return x[:, :nc] * F.sigmoid(x[:, nc:])
 
 
@@ -413,39 +414,38 @@ class G_NET(nn.Module):
             self.h_net3 = NEXT_STAGE_G(ngf, nef, ncf)
             self.img_net3 = GET_IMAGE_G(ngf)
 
-    def forward(self, z_code, sent_emb, word_embs, mask):
+    def forward(self, noise_vector: Tensor, sentence_features: Tensor, word_features: Tensor, mask):
         """
-            :param z_code: batch x cfg.GAN.Z_DIM
-            :param sent_emb: batch x cfg.TEXT.EMBEDDING_DIM
-            :param word_embs: batch x cdf x seq_len
+            :param noise_vector: batch x cfg.GAN.Z_DIM
+            :param sentence_features: batch x cfg.TEXT.EMBEDDING_DIM
+            :param word_features: batch x cdf x seq_len
             :param mask: batch x seq_len
             :return:
         """
-        fake_imgs = []
-        att_maps = []
-        c_code, mu, logvar = self.ca_net(sent_emb)
+        generated_images = []
+        attention_maps = []
+        conditioning_vector, mu, logvar = self.ca_net(sentence_features)
 
         if cfg.TREE.BRANCH_NUM > 0:
-            h_code1 = self.h_net1(z_code, c_code)
-            fake_img1 = self.img_net1(h_code1)
-            fake_imgs.append(fake_img1)
+            hidden_state_0 = self.h_net1(noise_vector, conditioning_vector)
+            generated_image_0 = self.img_net1(hidden_state_0)
+            generated_images.append(generated_image_0)
         if cfg.TREE.BRANCH_NUM > 1:
-            h_code2, att1 = \
-                self.h_net2(h_code1, c_code, word_embs, mask)
-            fake_img2 = self.img_net2(h_code2)
-            fake_imgs.append(fake_img2)
-            if att1 is not None:
-                att_maps.append(att1)
+            hidden_state_1, attention_map_1 = \
+                self.h_net2(hidden_state_0, conditioning_vector, word_features, mask)
+            generated_image_1 = self.img_net2(hidden_state_1)
+            generated_images.append(generated_image_1)
+            if attention_map_1 is not None:
+                attention_maps.append(attention_map_1)
         if cfg.TREE.BRANCH_NUM > 2:
-            h_code3, att2 = \
-                self.h_net3(h_code2, c_code, word_embs, mask)
-            fake_img3 = self.img_net3(h_code3)
-            fake_imgs.append(fake_img3)
-            if att2 is not None:
-                att_maps.append(att2)
+            hidden_state_2, attention_map_2 = \
+                self.h_net3(hidden_state_1, conditioning_vector, word_features, mask)
+            generated_image_2 = self.img_net3(hidden_state_2)
+            generated_images.append(generated_image_2)
+            if attention_map_2 is not None:
+                attention_maps.append(attention_map_2)
 
-        return fake_imgs, att_maps, mu, logvar
-
+        return generated_images, attention_maps, mu, logvar
 
 
 class G_DCGAN(nn.Module):
@@ -597,8 +597,8 @@ class D_NET128(nn.Module):
         self.COND_DNET = D_GET_LOGITS(ndf, nef, bcondition=True)
 
     def forward(self, x_var):
-        x_code8 = self.img_code_s16(x_var)   # 8 x 8 x 8df
-        x_code4 = self.img_code_s32(x_code8)   # 4 x 4 x 16df
+        x_code8 = self.img_code_s16(x_var)  # 8 x 8 x 8df
+        x_code4 = self.img_code_s32(x_code8)  # 4 x 4 x 16df
         x_code4 = self.img_code_s32_1(x_code4)  # 4 x 4 x 8df
         return x_code4
 
