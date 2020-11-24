@@ -1,13 +1,12 @@
 from typing import Dict, List
 import logging
 
-import torch
-from torch import Tensor
 from torch.utils.data import DataLoader
 
 from trainer import condGANTrainer
 from datasets import TextDataset
 
+from attnganw.random import get_vector_interpolation
 from attnganw.text import TextProcessor, directory_to_trainer_input
 
 
@@ -47,37 +46,6 @@ class GanTrainerWrapper:
         # self.gan_trainer.generate_examples(captions_per_file=captions_per_file,
         #                                    noise_vector_generator=get_single_noise_vector)
         self.gan_trainer.generate_examples(captions_per_file=captions_per_file,
-                                           noise_vector_generator=get_noise_interpolation)
+                                           noise_vector_generator=get_vector_interpolation)
 
 
-def get_single_noise_vector(batch_size: int, noise_vector_size: int, gpu_id: int) -> List[Tensor]:
-    noise_vector = torch.FloatTensor(batch_size, noise_vector_size)
-    if gpu_id >= 0:
-        noise_vector = noise_vector.cuda()
-    noise_vector.data.normal_(mean=0, std=1)
-
-    return [noise_vector]
-
-
-def get_noise_interpolation(batch_size: int, noise_vector_size: int, gpu_id: int,
-                            noise_vector_start: Tensor = None,
-                            noise_vector_end: Tensor = None,
-                            number_of_steps=4) -> List[Tensor]:
-    if noise_vector_start is None:
-        noise_vector_start: Tensor = torch.randn(batch_size, noise_vector_size, dtype=torch.float)
-
-    if noise_vector_end is None:
-        noise_vector_end: Tensor = torch.randn(batch_size, noise_vector_size, dtype=torch.float)
-
-    noise_vectors: List[Tensor] = []
-    for vector_index in range(number_of_steps + 1):
-        ratio: float = vector_index / float(number_of_steps)
-        ratio = 0
-
-        logging.debug("ratio " + str(ratio))
-        new_noise_vector: Tensor = noise_vector_start * (1 - ratio) + noise_vector_end * ratio
-        if gpu_id >= 0:
-            new_noise_vector = new_noise_vector.cuda()
-        noise_vectors.append(new_noise_vector)
-
-    return noise_vectors

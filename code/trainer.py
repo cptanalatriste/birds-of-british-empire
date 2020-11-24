@@ -21,7 +21,7 @@ from torch.autograd import Variable
 
 # ################# Text to image task############################ #
 from attnganw.image import ImageDecoder
-from attnganw.model import TextEncoderWrapper, GenerativeNetworkWrapper
+from attnganw.extmodel import TextEncoderWrapper, GenerativeNetworkWrapper
 
 
 class condGANTrainer(object):
