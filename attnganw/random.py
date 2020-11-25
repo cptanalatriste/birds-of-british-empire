@@ -1,12 +1,12 @@
 import logging
-from typing import List
+from typing import List, Tuple
 
 import torch
 from torch import Tensor
 
 
-def get_single_normal_vector(batch_size: int, noise_vector_size: int, gpu_id: int) -> List[Tensor]:
-    noise_vector = torch.FloatTensor(batch_size, noise_vector_size)
+def get_single_normal_vector(shape, gpu_id: int) -> List[Tensor]:
+    noise_vector = torch.FloatTensor(*shape)
     if gpu_id >= 0:
         noise_vector = noise_vector.cuda()
     noise_vector.data.normal_(mean=0, std=1)

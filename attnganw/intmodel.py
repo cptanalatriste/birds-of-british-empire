@@ -4,12 +4,14 @@ import torch
 from torch import nn, Tensor
 from torch.autograd import Variable
 
+from attnganw.random import get_single_normal_vector
+
 
 class ConditioningAugmentationWrapper:
 
-    def __init__(self, conditioning_augmentation_net: nn.Module, is_cuda: bool):
+    def __init__(self, conditioning_augmentation_net: nn.Module, gpu_id: int):
         self.conditioning_augmentation_net: nn.Module = conditioning_augmentation_net
-        self.is_cuda: bool = is_cuda
+        self.gpu_id: int = gpu_id
 
     def convert_to_conditioning_vector(self, sentence_vector: Tensor) -> Tuple[Tensor, Tensor, Tensor]:
         conditioning_vector, mean, diag_covariance_matrix = self.forward(sentence_vector=sentence_vector)
@@ -18,17 +20,14 @@ class ConditioningAugmentationWrapper:
     def forward(self, sentence_vector: Tensor) -> Tuple[Tensor, Tensor, Tensor]:
         mean, diag_covariance_matrix = self.conditioning_augmentation_net.encode(sentence_vector)
 
-        if self.is_cuda:
-            epsilon = torch.cuda.FloatTensor(diag_covariance_matrix.size()).normal_()
-        else:
-            epsilon = torch.FloatTensor(diag_covariance_matrix.size()).normal_()
-        epsilon = Variable(epsilon)
+        epsilon = get_single_normal_vector(shape=diag_covariance_matrix.size(), gpu_id=self.gpu_id)[0]
+        epsilon_variable = Variable(epsilon)
 
         conditioning_vector: Tensor = re_parametrise(mean=mean, diag_covariance_matrix=diag_covariance_matrix,
-                                                     epsilon=epsilon)
+                                                     epsilon_variable=epsilon_variable)
         return conditioning_vector, mean, diag_covariance_matrix
 
 
-def re_parametrise(mean: Tensor, diag_covariance_matrix: Tensor, epsilon: Tensor) -> Tensor:
+def re_parametrise(mean: Tensor, diag_covariance_matrix: Tensor, epsilon_variable: Tensor) -> Tensor:
     standard_deviation = diag_covariance_matrix.mul(0.5).exp_()
-    return epsilon.mul(standard_deviation).add_(mean)
+    return epsilon_variable.mul(standard_deviation).add_(mean)

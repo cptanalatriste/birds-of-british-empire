@@ -429,7 +429,7 @@ class G_NET(nn.Module):
         attention_maps = []
 
         conditioning_augmentation_wrapper: ConditioningAugmentationWrapper = ConditioningAugmentationWrapper(
-            conditioning_augmentation_net=self.ca_net, is_cuda=cfg.CUDA)
+            conditioning_augmentation_net=self.ca_net, gpu_id=cfg.GPU_ID)
         conditioning_vector, mu, logvar = conditioning_augmentation_wrapper.convert_to_conditioning_vector(
             sentence_vector=sentence_features)
 

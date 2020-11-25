@@ -1,12 +1,13 @@
 from typing import Dict, List
 import logging
 
+from torch import Tensor
 from torch.utils.data import DataLoader
 
 from trainer import condGANTrainer
 from datasets import TextDataset
 
-from attnganw.random import get_vector_interpolation
+from attnganw.random import get_vector_interpolation, get_single_normal_vector
 from attnganw.text import TextProcessor, directory_to_trainer_input
 
 
@@ -44,8 +45,10 @@ class GanTrainerWrapper:
                                                                         text_processor=text_processor)
 
         # self.gan_trainer.generate_examples(captions_per_file=captions_per_file,
-        #                                    noise_vector_generator=get_single_noise_vector)
+        #                                    noise_vector_generator=default_noise_vector_generator)
         self.gan_trainer.generate_examples(captions_per_file=captions_per_file,
                                            noise_vector_generator=get_vector_interpolation)
 
 
+def default_noise_vector_generator(batch_size: int, noise_vector_size: int, gpu_id: int) -> List[Tensor]:
+    return get_single_normal_vector(shape=(batch_size, noise_vector_size), gpu_id=gpu_id)
