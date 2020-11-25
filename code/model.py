@@ -12,6 +12,8 @@ from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
 from miscc.config import cfg
 from GlobalAttention import GlobalAttentionGeneral as ATT_NET
 
+from attnganw.intmodel import ConditioningAugmentationWrapper
+
 
 class GLU(nn.Module):
     def __init__(self):
@@ -287,6 +289,7 @@ class CA_NET(nn.Module):
 
     def reparametrize(self, mu, logvar):
         std = logvar.mul(0.5).exp_()
+
         if cfg.CUDA:
             eps = torch.cuda.FloatTensor(std.size()).normal_()
         else:
@@ -424,26 +427,30 @@ class G_NET(nn.Module):
         """
         generated_images = []
         attention_maps = []
-        conditioning_vector, mu, logvar = self.ca_net(sentence_features)
+
+        conditioning_augmentation_wrapper: ConditioningAugmentationWrapper = ConditioningAugmentationWrapper(
+            conditioning_augmentation_net=self.ca_net, is_cuda=cfg.CUDA)
+        conditioning_vector, mu, logvar = conditioning_augmentation_wrapper.convert_to_conditioning_vector(
+            sentence_vector=sentence_features)
 
         if cfg.TREE.BRANCH_NUM > 0:
             hidden_state_0 = self.h_net1(noise_vector, conditioning_vector)
-            generated_image_0 = self.img_net1(hidden_state_0)
-            generated_images.append(generated_image_0)
+        generated_image_0 = self.img_net1(hidden_state_0)
+        generated_images.append(generated_image_0)
         if cfg.TREE.BRANCH_NUM > 1:
             hidden_state_1, attention_map_1 = \
                 self.h_net2(hidden_state_0, conditioning_vector, word_features, mask)
-            generated_image_1 = self.img_net2(hidden_state_1)
-            generated_images.append(generated_image_1)
-            if attention_map_1 is not None:
-                attention_maps.append(attention_map_1)
+        generated_image_1 = self.img_net2(hidden_state_1)
+        generated_images.append(generated_image_1)
+        if attention_map_1 is not None:
+            attention_maps.append(attention_map_1)
         if cfg.TREE.BRANCH_NUM > 2:
             hidden_state_2, attention_map_2 = \
                 self.h_net3(hidden_state_1, conditioning_vector, word_features, mask)
-            generated_image_2 = self.img_net3(hidden_state_2)
-            generated_images.append(generated_image_2)
-            if attention_map_2 is not None:
-                attention_maps.append(attention_map_2)
+        generated_image_2 = self.img_net3(hidden_state_2)
+        generated_images.append(generated_image_2)
+        if attention_map_2 is not None:
+            attention_maps.append(attention_map_2)
 
         return generated_images, attention_maps, mu, logvar
 

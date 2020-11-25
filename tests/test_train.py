@@ -7,7 +7,7 @@ from torch import Tensor
 from attnganw.random import get_vector_interpolation
 
 
-class Test(TestCase):
+class TestInterpolation(TestCase):
 
     def test_get_noise_interpolation(self):
         batch_size = 1
