@@ -30,8 +30,11 @@ def drawCaption(convas, captions, ixtoword, vis_size, off1=2, off2=2):
     num = captions.size(0)
     img_txt = Image.fromarray(convas)
     # get a font
-    # fnt = None  # ImageFont.truetype('Pillow/Tests/fonts/FreeMono.ttf', 50)
-    fnt = ImageFont.truetype("/System/Library/Fonts/SFNSMono.ttf", 50)
+    # fnt = None
+    # This font works in Windows
+    fnt = ImageFont.truetype('C:\Windows\Fonts\\arialbd.ttf', 50)
+    # This font works in MacOS
+    # fnt = ImageFont.truetype("/System/Library/Fonts/SFNSMono.ttf", 50)
     # get a drawing context
     d = ImageDraw.Draw(img_txt)
     sentence_list = []
