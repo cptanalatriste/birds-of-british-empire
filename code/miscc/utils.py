@@ -1,17 +1,13 @@
-import os
 import errno
+import os
+from copy import deepcopy
 from typing import List
 
 import numpy as np
-from torch.nn import init
-
+import skimage.transform
 import torch
 import torch.nn as nn
-
 from PIL import Image, ImageDraw, ImageFont
-from copy import deepcopy
-import skimage.transform
-
 from miscc.config import cfg
 
 # For visualization ################################################
