@@ -1,6 +1,5 @@
 from typing import Tuple
 
-import torch
 from torch import nn, Tensor
 from torch.autograd import Variable
 

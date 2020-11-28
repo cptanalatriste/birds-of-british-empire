@@ -44,10 +44,10 @@ class GanTrainerWrapper:
         captions_per_file: Dict[str, List] = directory_to_trainer_input(data_directory=data_directory,
                                                                         text_processor=text_processor)
 
-        # self.gan_trainer.generate_examples(captions_per_file=captions_per_file,
-        #                                    noise_vector_generator=default_noise_vector_generator)
         self.gan_trainer.generate_examples(captions_per_file=captions_per_file,
-                                           noise_vector_generator=get_vector_interpolation)
+                                           noise_vector_generator=default_noise_vector_generator)
+        # self.gan_trainer.generate_examples(captions_per_file=captions_per_file,
+        #                                    noise_vector_generator=get_vector_interpolation)
 
 
 def default_noise_vector_generator(batch_size: int, noise_vector_size: int, gpu_id: int) -> List[Tensor]:
