@@ -1,14 +1,13 @@
-from typing import Dict, List
 import logging
+from typing import Dict, List
 
+from datasets import TextDataset
 from torch import Tensor
 from torch.utils.data import DataLoader
-
 from trainer import condGANTrainer
-from datasets import TextDataset
 
-from attnganw.random import get_vector_interpolation, get_single_normal_vector
-from attnganw.text import TextProcessor, directory_to_trainer_input
+from attnganw.random import get_single_normal_vector
+from attnganw.text import TextProcessor, directory_to_trainer_input, get_lines_from_file
 
 
 class GanTrainerWrapper:
@@ -41,7 +40,12 @@ class GanTrainerWrapper:
         logging.basicConfig(level=logging.DEBUG)
         text_processor: TextProcessor = TextProcessor(word_to_index=self.word_to_index)
 
-        captions_per_file: Dict[str, List] = directory_to_trainer_input(data_directory=data_directory,
+        # list_of_files_path: str = '%s/example_filenames.txt' % data_directory
+        # file_names: List[str] = get_lines_from_file(list_of_files_path)
+        # file_names = ['%s/%s.txt' % (data_directory, file_name) for file_name in file_names]
+
+        file_names = ["../temp/caption_file.txt"]
+        captions_per_file: Dict[str, List] = directory_to_trainer_input(file_names=file_names,
                                                                         text_processor=text_processor)
 
         self.gan_trainer.generate_examples(captions_per_file=captions_per_file,

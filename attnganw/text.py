@@ -1,8 +1,8 @@
+import logging
 from typing import List, Dict
 
-from nltk import RegexpTokenizer
 import numpy as np
-import logging
+from nltk import RegexpTokenizer
 
 
 class TextProcessor:
@@ -47,40 +47,39 @@ class TextProcessor:
         return word_vector
 
 
-def directory_to_trainer_input(data_directory: str, text_processor: TextProcessor) -> Dict[str, List]:
+def directory_to_trainer_input(file_names: List[str], text_processor: TextProcessor) -> Dict[str, List]:
     """generate images from example sentences"""
-    list_of_files_path = '%s/example_filenames.txt' % data_directory
     captions_per_file: Dict[str, List] = {}
-    with open(list_of_files_path, "r") as list_file:
-        filenames = list_file.read().split('\n')
-        for file_name in filenames:
-            if len(file_name) == 0:
-                continue
-            file_path = '%s/%s.txt' % (data_directory, file_name)
-            with open(file_path, "r") as file:
-                print('Load examples from:', file_name)
-                sentences = file.read().split('\n')
-                # a list of indices for a sentence
-                captions: List[List[int]] = []
-                caption_lengths: List[int] = []
+    for file_name in file_names:
+        print('Load examples from:', file_name)
+        sentences = get_lines_from_file(file_name)
+        # a list of indices for a sentence
+        captions: List[List[int]] = []
+        caption_lengths: List[int] = []
 
-                for sent in sentences:
+        for sent in sentences:
 
-                    rev: List[int] = text_processor.to_number_vector(text_to_encode=sent)
-                    if len(rev) > 0:
-                        captions.append(rev)
-                        caption_lengths.append(len(rev))
-            max_len = np.max(caption_lengths)
+            rev: List[int] = text_processor.to_number_vector(text_to_encode=sent)
+            if len(rev) > 0:
+                captions.append(rev)
+                caption_lengths.append(len(rev))
+        max_len = np.max(caption_lengths)
 
-            sorted_indices = np.argsort(caption_lengths)[::-1]
-            caption_lengths = np.asarray(caption_lengths)
-            caption_lengths = caption_lengths[sorted_indices]
-            cap_array = np.zeros((len(captions), max_len), dtype='int64')
-            for i in range(len(captions)):
-                idx = sorted_indices[i]
-                cap = captions[idx]
-                c_len = len(cap)
-                cap_array[i, :c_len] = cap
-            file_as_key = file_name[(file_name.rfind('/') + 1):]
-            captions_per_file[file_as_key] = [cap_array, caption_lengths, sorted_indices]
+        sorted_indices = np.argsort(caption_lengths)[::-1]
+        caption_lengths = np.asarray(caption_lengths)
+        caption_lengths = caption_lengths[sorted_indices]
+        cap_array = np.zeros((len(captions), max_len), dtype='int64')
+        for i in range(len(captions)):
+            idx = sorted_indices[i]
+            cap = captions[idx]
+            c_len = len(cap)
+            cap_array[i, :c_len] = cap
+        file_as_key = file_name[(file_name.rfind('/') + 1):]
+        captions_per_file[file_as_key] = [cap_array, caption_lengths, sorted_indices]
     return captions_per_file
+
+
+def get_lines_from_file(file_name: str) -> List[str]:
+    with open(file_name, "r") as file:
+        lines: List[str] = file.read().split('\n')
+        return [line for line in lines if len(line) > 0]
