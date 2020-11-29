@@ -3,7 +3,8 @@ from typing import Tuple
 from torch import nn, Tensor
 from torch.autograd import Variable
 
-from attnganw.random import get_single_normal_vector
+from attnganw import config
+from attnganw.random import get_single_normal_vector, get_zeroes
 
 
 class ConditioningAugmentationWrapper:
@@ -19,8 +20,11 @@ class ConditioningAugmentationWrapper:
     def forward(self, sentence_vector: Tensor) -> Tuple[Tensor, Tensor, Tensor]:
         mean, diag_covariance_matrix = self.conditioning_augmentation_net.encode(sentence_vector)
 
-        # epsilon = get_single_normal_vector(shape=diag_covariance_matrix.size(), gpu_id=self.gpu_id)[0]
-        epsilon = torch.zeros(diag_covariance_matrix.size())
+        if config.generation['do_conditioning_augmentation']:
+            epsilon = get_single_normal_vector(shape=diag_covariance_matrix.size(), gpu_id=self.gpu_id)[0]
+        else:
+            epsilon = get_zeroes(shape=diag_covariance_matrix.size(), gpu_id=self.gpu_id)
+
         epsilon_variable = Variable(epsilon)
 
         conditioning_vector: Tensor = re_parametrise(mean=mean, diag_covariance_matrix=diag_covariance_matrix,
