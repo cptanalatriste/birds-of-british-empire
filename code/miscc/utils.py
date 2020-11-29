@@ -1,17 +1,13 @@
-import os
 import errno
+import os
+from copy import deepcopy
 from typing import List
 
 import numpy as np
-from torch.nn import init
-
+import skimage.transform
 import torch
 import torch.nn as nn
-
 from PIL import Image, ImageDraw, ImageFont
-from copy import deepcopy
-import skimage.transform
-
 from miscc.config import cfg
 
 # For visualization ################################################
@@ -34,8 +30,11 @@ def drawCaption(convas, captions, ixtoword, vis_size, off1=2, off2=2):
     num = captions.size(0)
     img_txt = Image.fromarray(convas)
     # get a font
-    # fnt = None  # ImageFont.truetype('Pillow/Tests/fonts/FreeMono.ttf', 50)
-    fnt = ImageFont.truetype("/System/Library/Fonts/SFNSMono.ttf", 50)
+    # fnt = None
+    # This font works in Windows
+    fnt = ImageFont.truetype('C:\Windows\Fonts\\arialbd.ttf', 50)
+    # This font works in MacOS
+    # fnt = ImageFont.truetype("/System/Library/Fonts/SFNSMono.ttf", 50)
     # get a drawing context
     d = ImageDraw.Draw(img_txt)
     sentence_list = []

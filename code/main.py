@@ -1,20 +1,17 @@
-from typing import Dict, List
-
-from miscc.config import cfg, cfg_from_file
-from datasets import TextDataset
-
+import argparse
+import datetime
 import os
+import pprint
+import random
 import sys
 import time
-import random
-import pprint
-import datetime
-import dateutil.tz
-import argparse
-import numpy as np
 
+import dateutil.tz
+import numpy as np
 import torch
 import torchvision.transforms as transforms
+from datasets import TextDataset
+from miscc.config import cfg, cfg_from_file
 
 from attnganw.train import GanTrainerWrapper
 
@@ -94,7 +91,7 @@ if __name__ == "__main__":
     else:
         '''generate images from pre-extracted embeddings'''
         if cfg.B_VALIDATION:
-            gan_trainer_wrapper.sampling(split_dir)  # generate images for the whole valid dataset
+            gan_trainer_wrapper.sample()  # generate images for the whole valid dataset
         else:
             gan_trainer_wrapper.generate_examples(
                 data_directory=cfg.DATA_DIR)  # generate images for customized captions
