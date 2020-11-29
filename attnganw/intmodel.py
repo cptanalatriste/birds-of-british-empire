@@ -20,7 +20,8 @@ class ConditioningAugmentationWrapper:
     def forward(self, sentence_vector: Tensor) -> Tuple[Tensor, Tensor, Tensor]:
         mean, diag_covariance_matrix = self.conditioning_augmentation_net.encode(sentence_vector)
 
-        epsilon = get_single_normal_vector(shape=diag_covariance_matrix.size(), gpu_id=self.gpu_id)[0]
+        # epsilon = get_single_normal_vector(shape=diag_covariance_matrix.size(), gpu_id=self.gpu_id)[0]
+        epsilon = torch.zeros(diag_covariance_matrix.size())
         epsilon_variable = Variable(epsilon)
 
         conditioning_vector: Tensor = re_parametrise(mean=mean, diag_covariance_matrix=diag_covariance_matrix,
