@@ -15,7 +15,7 @@ class FeaturePredictorTrainer:
 
         self.freeze_layers()
 
-        classifier_block_features: int = self.model.fc.resnet50_classifier_block
+        classifier_block_features: int = self.model.fc.in_features
         linear_out_features: int = linear_out_features
         self.model.fc = nn.Sequential(
             nn.Linear(in_features=classifier_block_features, out_features=linear_out_features),
