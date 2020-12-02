@@ -30,7 +30,7 @@ class FeaturePredictorTrainer:
 
     def train_predictor(self, epochs: int, train_loader: DataLoader, validation_loader: DataLoader,
                         optimiser: Optimizer,
-                        loss_function, device: str):
+                        loss_function, device):
         for epoch in range(1, epochs + 1):
             avg_training_loss: float = self.do_train(train_loader=train_loader, optimiser=optimiser,
                                                      loss_function=loss_function, device=device)
@@ -44,7 +44,7 @@ class FeaturePredictorTrainer:
                                                                                                               avg_validation_loss,
                                                                                                               validation_accuracy))
 
-    def do_train(self, train_loader: DataLoader, optimiser: Optimizer, loss_function, device: str) -> float:
+    def do_train(self, train_loader: DataLoader, optimiser: Optimizer, loss_function, device) -> float:
 
         self.model.train()
 
@@ -69,7 +69,7 @@ class FeaturePredictorTrainer:
         avg_training_loss = avg_training_loss / train_loader.batch_size
         return avg_training_loss
 
-    def evaluate(self, validation_loader: DataLoader, loss_function, device: str):
+    def evaluate(self, validation_loader: DataLoader, loss_function, device):
 
         self.model.eval()
 
