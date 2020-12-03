@@ -68,7 +68,9 @@ class ImageFolderBuilder:
 
         images_dataframe: DataFrame = pd.read_csv(self.images_data_file, sep='\s+', header=None,
                                                   error_bad_lines=False,
-                                                  warn_bad_lines=False, usecols=[0, 1],
+                                                  warn_bad_lines=False,
+                                                  index_col=0,
+                                                  usecols=[0, 1],
                                                   names=[IMAGE_ID_COLUMN, IMAGE_NAME_COLUMN])
 
         self.copy_by_attribute_value(attribute_id=attribute_id, attribute_value=PRESENT_ATTRIBUTE_VALUE,
@@ -76,14 +78,15 @@ class ImageFolderBuilder:
                                      attributes_dataframe=attributes_dataframe,
                                      images_dataframe=images_dataframe)
 
-        self.copy_by_attribute_value(attribute_id=attribute_id, attribute_value=ABSENT_ATTRIBUTE_VALUE,
-                                     target_directory=negative_image_folder,
-                                     attributes_dataframe=attributes_dataframe,
-                                     images_dataframe=images_dataframe)
+        # self.copy_by_attribute_value(attribute_id=attribute_id, attribute_value=ABSENT_ATTRIBUTE_VALUE,
+        #                              target_directory=negative_image_folder,
+        #                              attributes_dataframe=attributes_dataframe,
+        #                              images_dataframe=images_dataframe)
 
     def copy_by_attribute_value(self, attribute_id: int, attribute_value: int, target_directory: str,
                                 attributes_dataframe: DataFrame,
                                 images_dataframe: DataFrame):
+
         matching_images_dataframe: DataFrame = attributes_dataframe.loc[
             attributes_dataframe[attribute_id] == attribute_value]
 
