@@ -29,26 +29,25 @@ class FeaturePredictorTrainer:
             parameter.requires_grad = False
 
     def train_predictor(self, epochs: int, train_loader: DataLoader, validation_loader: DataLoader,
-                        optimiser: Optimizer,
-                        loss_function, device):
+                        optimiser: Optimizer, loss_function, device):
         for epoch in range(1, epochs + 1):
-            avg_training_loss: float = self.do_train(train_loader=train_loader, optimiser=optimiser,
-                                                     loss_function=loss_function, device=device)
-            avg_validation_loss: float
+            training_loss: float = self.do_train(train_loader=train_loader, optimiser=optimiser,
+                                                 loss_function=loss_function, device=device)
+            validation_loss: float
             validation_accuracy: float
-            avg_validation_loss, validation_accuracy = self.evaluate(validation_loader=validation_loader,
-                                                                     loss_function=loss_function, device=device)
+            validation_loss, validation_accuracy = self.evaluate(validation_loader=validation_loader,
+                                                                 loss_function=loss_function, device=device)
 
             logging.info("Epoch: {}, Training Loss: {:.2f}, Validation Loss: {:.2f}, accuracy: {:.2f}".format(epoch,
-                                                                                                              avg_training_loss,
-                                                                                                              avg_validation_loss,
+                                                                                                              training_loss,
+                                                                                                              validation_loss,
                                                                                                               validation_accuracy))
 
     def do_train(self, train_loader: DataLoader, optimiser: Optimizer, loss_function, device) -> float:
 
         self.model.train()
 
-        avg_training_loss: float = 0.0
+        training_loss: float = 0.0
 
         for training_batch in train_loader:
             optimiser.zero_grad()
@@ -64,10 +63,10 @@ class FeaturePredictorTrainer:
             training_loss.backward()
             optimiser.step()
 
-            avg_training_loss += training_loss.data.item() * images.size(0)
+            training_loss += training_loss.data.item() * images.size(0)
 
-        avg_training_loss = avg_training_loss / train_loader.batch_size
-        return avg_training_loss
+        training_loss = training_loss / len(train_loader.dataset)
+        return training_loss
 
     def evaluate(self, validation_loader: DataLoader, loss_function, device):
 
@@ -75,7 +74,7 @@ class FeaturePredictorTrainer:
 
         correct_predictions: int = 0
         evaluations: int = 0
-        avg_validation_loss: float = 0.0
+        validation_loss: float = 0.0
 
         for validation_batch in validation_loader:
             images: Tensor
@@ -87,15 +86,15 @@ class FeaturePredictorTrainer:
 
             model_output = self.model(images)
             validation_loss = loss_function(model_output, classes_in_batch)
-            avg_validation_loss += validation_loss.data.item() * images.size(0)
+            validation_loss += validation_loss.data.item() * images.size(0)
 
-            class_by_model = torch.amax(F.softmax(model_output), dim=1)[1]
+            class_by_model = torch.max(F.softmax(model_output), dim=1)[1]
             model_matches = torch.eq(class_by_model, classes_in_batch).view(-1)
 
             correct_predictions += torch.sum(model_matches).item()
             evaluations += model_matches.shape[0]
 
-        avg_validation_loss = avg_validation_loss / validation_loader.batch_size
+        validation_loss = validation_loss / len(validation_loader)
         validation_accuracy = correct_predictions / evaluations
 
-        return avg_validation_loss, validation_accuracy
+        return validation_loss, validation_accuracy

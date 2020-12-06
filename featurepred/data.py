@@ -1,8 +1,9 @@
 import logging
 import shutil
+import traceback
 
 import pandas as pd
-from PIL.Image import Image
+from PIL import Image
 from pandas import DataFrame, Series
 from torch.utils.data import DataLoader
 from torchvision.datasets import ImageFolder
@@ -42,7 +43,8 @@ def can_open_image_file(image_path: str):
     try:
         Image.open(image_path)
         return True
-    except:
+    except Exception:
+        logging.error(traceback.format_exc())
         return False
 
 
@@ -142,6 +144,8 @@ class ImageFolderBuilder:
             image_name: str = bird_repository.get_name_from_image_id(image_id=index)
             original_file: str = self.image_directory + image_name
             copy_file(original_file=original_file, destination_folder=target_directory)
+
+        logging.info("{} images copied to {}".format(len(images_dataframe.index), target_directory))
 
 
 def copy_file(original_file: str, destination_folder: str):

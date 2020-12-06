@@ -10,6 +10,8 @@ from featurepred.data import ResNet50DataLoaderBuilder
 from featurepred.train import FeaturePredictorTrainer
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO)
+
     resnet50_model: Module = models.resnet50(pretrained=True)
     linear_out_features: int = 500
     trainer: FeaturePredictorTrainer = FeaturePredictorTrainer(model=resnet50_model,
@@ -32,4 +34,4 @@ if __name__ == "__main__":
         device = torch.device("cuda")
 
     trainer.train_predictor(epochs=epochs, train_loader=train_loader, validation_loader=validation_loader,
-                            optimiser=optimiser, loss_function=loss_function)
+                            optimiser=optimiser, loss_function=loss_function, device=device)
