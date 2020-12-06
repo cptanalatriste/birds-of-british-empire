@@ -11,9 +11,12 @@ class TestDataUtils(TestCase):
         attributes_data_file: str = 'image_attribute_labels_test.txt'
         certainty_id: int = 4
         images_data_file: str = 'images_test.txt'
+        split_data_file: str = 'train_test_split_test.txt'
         bird_repository: BirdDatasetRepository = BirdDatasetRepository(attributes_data_file=attributes_data_file,
                                                                        images_data_file=images_data_file,
-                                                                       certainty_id=certainty_id)
+                                                                       certainty_id=certainty_id,
+                                                                       split_data_file=split_data_file,
+                                                                       is_training=True)
 
         rows_in_repository: int = len(bird_repository.attributes_dataframe.index)
         self.assertTrue(rows_in_repository == 2, msg="Rows in repository are {}".format(rows_in_repository))

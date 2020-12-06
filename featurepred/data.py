@@ -1,20 +1,19 @@
-import glob
 import logging
-import os
 import shutil
 
+import pandas as pd
 from PIL.Image import Image
-from pandas import DataFrame
+from pandas import DataFrame, Series
 from torch.utils.data import DataLoader
 from torchvision.datasets import ImageFolder
 from torchvision.transforms import transforms, Compose
-import pandas as pd
 
 ATTRIBUTE_ID_COLUMN: str = 'attribute_id'
 CERTAINTY_ID_COLUMN: str = 'certainty_id'
 IMAGE_ID_COLUMN: str = 'image_id'
 IS_PRESENT_COLUMN: str = 'is_present'
 IMAGE_NAME_COLUMN: str = 'image_name'
+IS_TRAINING_IMAGE_COLUMN: str = 'is_training_image'
 
 PRESENT_ATTRIBUTE_VALUE: int = 1
 ABSENT_ATTRIBUTE_VALUE: int = 0
@@ -49,7 +48,8 @@ def can_open_image_file(image_path: str):
 
 class BirdDatasetRepository:
 
-    def __init__(self, attributes_data_file: str, images_data_file: str, certainty_id: int):
+    def __init__(self, attributes_data_file: str, images_data_file: str, certainty_id: int,
+                 split_data_file: str, is_training: bool):
         self.attributes_dataframe: DataFrame = pd.read_csv(attributes_data_file, sep='\s+', header=None,
                                                            error_bad_lines=False,
                                                            warn_bad_lines=False, usecols=[0, 1, 2, 3],
@@ -57,6 +57,14 @@ class BirdDatasetRepository:
                                                                   IS_PRESENT_COLUMN,
                                                                   CERTAINTY_ID_COLUMN])
 
+        self.split_dataframe: DataFrame = pd.read_csv(split_data_file, sep='\s+', header=None,
+                                                      error_bad_lines=False,
+                                                      warn_bad_lines=False,
+                                                      index_col=0,
+                                                      usecols=[0, 1],
+                                                      names=[IMAGE_ID_COLUMN, IS_TRAINING_IMAGE_COLUMN])
+
+        self.filter_by_train_test_split(is_training=is_training)
         self.filter_attributes_by_certainty_id(certainty_id=certainty_id)
         self.attributes_dataframe = self.attributes_dataframe.pivot(index=IMAGE_ID_COLUMN, columns=ATTRIBUTE_ID_COLUMN,
                                                                     values=IS_PRESENT_COLUMN)
@@ -71,6 +79,18 @@ class BirdDatasetRepository:
     def filter_attributes_by_certainty_id(self, certainty_id: int) -> None:
         self.attributes_dataframe = self.attributes_dataframe.loc[
             self.attributes_dataframe[CERTAINTY_ID_COLUMN] == certainty_id]
+
+    def filter_by_train_test_split(self, is_training: bool):
+
+        flag_value: int = ABSENT_ATTRIBUTE_VALUE
+        if is_training:
+            flag_value = PRESENT_ATTRIBUTE_VALUE
+
+        images_to_include: Series = self.split_dataframe[
+            self.split_dataframe[IS_TRAINING_IMAGE_COLUMN] == flag_value].index
+
+        self.attributes_dataframe = self.attributes_dataframe.loc[
+            self.attributes_dataframe[IMAGE_ID_COLUMN].isin(images_to_include)]
 
     def get_images_by_attribute_value(self, attribute_id: int, attribute_value: int) -> DataFrame:
         matching_images_dataframe: DataFrame = self.attributes_dataframe.loc[
@@ -92,25 +112,28 @@ class BirdDatasetRepository:
 
 class ImageFolderBuilder:
 
-    def __init__(self, attributes_data_file: str, images_data_file: str, image_directory: str):
+    def __init__(self, attributes_data_file: str, images_data_file: str, image_directory: str, split_data_file: str):
         self.attributes_data_file = attributes_data_file
         self.image_directory = image_directory
         self.images_data_file = images_data_file
+        self.split_data_file = split_data_file
 
-    def build(self, attribute_id: int, certainty_id: int, positive_image_folder: str, negative_image_folder: str):
+    def build(self, attribute_id: int, certainty_id: int, positive_image_folder: str, negative_image_folder: str,
+              is_training: bool):
         self.copy_by_attribute_value(attribute_id=attribute_id, attribute_value=PRESENT_ATTRIBUTE_VALUE,
-                                     target_directory=positive_image_folder, certainty_id=certainty_id)
-
-        # self.copy_by_attribute_value(attribute_id=attribute_id, attribute_value=ABSENT_ATTRIBUTE_VALUE,
-        #                              target_directory=negative_image_folder,
-        #                              attributes_dataframe=attributes_dataframe,
-        #                              images_dataframe=images_dataframe)
+                                     target_directory=positive_image_folder, certainty_id=certainty_id,
+                                     is_training=is_training)
+        self.copy_by_attribute_value(attribute_id=attribute_id, attribute_value=ABSENT_ATTRIBUTE_VALUE,
+                                     target_directory=negative_image_folder, certainty_id=certainty_id,
+                                     is_training=is_training)
 
     def copy_by_attribute_value(self, attribute_id: int, attribute_value: int, target_directory: str,
-                                certainty_id: int):
+                                certainty_id: int, is_training: bool):
         bird_repository: BirdDatasetRepository = BirdDatasetRepository(attributes_data_file=self.attributes_data_file,
                                                                        images_data_file=self.images_data_file,
-                                                                       certainty_id=certainty_id)
+                                                                       certainty_id=certainty_id,
+                                                                       split_data_file=self.split_data_file,
+                                                                       is_training=is_training)
 
         images_dataframe: DataFrame = bird_repository.get_images_by_attribute_value(attribute_id=attribute_id,
                                                                                     attribute_value=attribute_value)
