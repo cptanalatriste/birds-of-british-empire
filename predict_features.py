@@ -11,7 +11,8 @@ from featurepred.train import FeaturePredictorTrainer, output_to_predictions
 from utils.image import plot_images_with_labels
 
 
-def start_training(trainer: FeaturePredictorTrainer, train_loader: DataLoader, validation_loader: DataLoader):
+def start_training(trainer: FeaturePredictorTrainer, train_loader: DataLoader, validation_loader: DataLoader,
+                   epochs: int):
     optimiser = optim.Adam(params=resnet50_model.parameters(), lr=learning_rate)
     loss_function = torch.nn.CrossEntropyLoss()
     device = torch.device("cpu")
@@ -50,7 +51,7 @@ if __name__ == "__main__":
         image_folder=validation_image_folder,
         batch_size=batch_size)
     validation_loader: DataLoader = valid_data_loader_builder.build()
-    start_training()
+    start_training(trainer=trainer, train_loader=train_loader, validation_loader=validation_loader, epochs=epochs)
 
     trainer.load_model_from_file()
     trainer.model.eval()
