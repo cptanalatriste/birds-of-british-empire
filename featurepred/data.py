@@ -4,9 +4,10 @@ import traceback
 from typing import List
 
 import pandas as pd
+import numpy as np
 from PIL import Image
 from pandas import DataFrame, Series
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, WeightedRandomSampler
 from torchvision.datasets import ImageFolder
 from torchvision.transforms import transforms, Compose
 
@@ -40,7 +41,19 @@ class ResNet50DataLoaderBuilder:
         self.batch_size: int = batch_size
 
     def build(self) -> DataLoader:
-        return DataLoader(dataset=self.image_folder, batch_size=self.batch_size, shuffle=True)
+        sampler = get_weighted_sampler(self.image_folder)
+        return DataLoader(dataset=self.image_folder, batch_size=self.batch_size, sampler=sampler)
+
+
+def get_weighted_sampler(image_folder: ImageFolder) -> WeightedRandomSampler:
+    class_per_image: List[int] = image_folder.targets
+    num_samples: int = len(class_per_image)
+    classes, counts = np.unique(class_per_image, return_counts=True)
+    logging.info("classes: {} counts: {} num_samples: {}".format(classes, counts, num_samples))
+
+    class_weights: List[float] = [sum(counts) / class_count for class_count in counts]
+    image_weights: List[float] = [class_weights[image_class] for image_class in class_per_image]
+    return WeightedRandomSampler(weights=image_weights, num_samples=num_samples)
 
 
 def can_open_image_file(image_path: str):

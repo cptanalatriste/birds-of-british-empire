@@ -12,10 +12,10 @@ from torch.utils.data import DataLoader
 
 class FeaturePredictorTrainer:
 
-    def __init__(self, model: Module, linear_out_features: int, model_state_file: str):
-        self.model: Module = model
+    def __init__(self, base_model: Module, linear_out_features: int, model_state_file: str):
         self.model_state_file = model_state_file
 
+        self.model: Module = base_model
         self.freeze_layers()
 
         classifier_block_features: int = self.model.fc.in_features
@@ -26,6 +26,10 @@ class FeaturePredictorTrainer:
             nn.Dropout(),
             nn.Linear(in_features=linear_out_features, out_features=2)
         )
+
+    def load_model_from_file(self) -> None:
+        self.model.load_state_dict(torch.load(self.model_state_file))
+        logging.info("Model state loaded from {}".format(self.model_state_file))
 
     def freeze_layers(self):
         for name, parameter in self.model.named_parameters():
@@ -119,7 +123,7 @@ def evaluate(model, validation_loader: DataLoader, loss_function, device) -> Tup
 
 
 def predict_and_evaluate(model_output: Tensor, real_labels: Tensor) -> Tuple[float, float]:
-    class_by_model = torch.max(F.softmax(model_output), dim=1)[1]
+    class_by_model: Tensor = output_to_predictions(model_output=model_output)
     model_matches = torch.eq(class_by_model, real_labels).view(-1)
 
     correct_predictions = torch.sum(model_matches).item()
@@ -127,6 +131,11 @@ def predict_and_evaluate(model_output: Tensor, real_labels: Tensor) -> Tuple[flo
 
     logging.debug("correct_predictions {} evaluations {} ".format(correct_predictions, evaluations))
     return correct_predictions, evaluations
+
+
+def output_to_predictions(model_output: Tensor) -> Tensor:
+    class_by_model = torch.max(F.softmax(model_output), dim=1)[1]
+    return class_by_model
 
 
 def calculate_epoch_metric(metrics_per_batch: List[Tuple[float, int]]) -> float:
