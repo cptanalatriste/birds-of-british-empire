@@ -1,6 +1,7 @@
 import logging
 import shutil
 import traceback
+from typing import List
 
 import pandas as pd
 from PIL import Image
@@ -23,16 +24,19 @@ ABSENT_ATTRIBUTE_VALUE: int = 0
 class ResNet50DataLoaderBuilder:
 
     def __init__(self, image_folder: str, batch_size: int):
+        self.means: List[float] = [0.485, 0.456, 0.406]
+        self.std_devs: List[float] = [0.229, 0.224, 0.225]
+
         self.image_transformations: Compose = transforms.Compose([
             transforms.Resize(size=(64, 64)),
             transforms.ToTensor(),
-            transforms.Normalize(mean=[0.485, 0.456, 0.406],
-                                 std=[0.229, 0.224, 0.225])
+            transforms.Normalize(mean=self.means,
+                                 std=self.std_devs)
         ])
 
         self.image_folder: ImageFolder = ImageFolder(root=image_folder, transform=self.image_transformations,
                                                      is_valid_file=can_open_image_file)
-
+        self.class_names = self.image_folder.classes
         self.batch_size: int = batch_size
 
     def build(self) -> DataLoader:

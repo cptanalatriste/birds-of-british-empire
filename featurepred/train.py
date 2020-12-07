@@ -1,4 +1,5 @@
 import logging
+import time
 from typing import Tuple, List
 
 import torch
@@ -11,8 +12,9 @@ from torch.utils.data import DataLoader
 
 class FeaturePredictorTrainer:
 
-    def __init__(self, model: Module, linear_out_features: int):
+    def __init__(self, model: Module, linear_out_features: int, model_state_file: str):
         self.model: Module = model
+        self.model_state_file = model_state_file
 
         self.freeze_layers()
 
@@ -29,8 +31,16 @@ class FeaturePredictorTrainer:
         for name, parameter in self.model.named_parameters():
             parameter.requires_grad = False
 
+    def save_model_state(self):
+        torch.save(self.model.state_dict(), self.model_state_file)
+        logging.info("Model state saved at {}".format(self.model_state_file))
+
     def train_predictor(self, epochs: int, train_loader: DataLoader, validation_loader: DataLoader,
                         optimiser: Optimizer, loss_function, device):
+        train_start: float = time.time()
+        best_accuracy: float = 0.0
+        self.save_model_state()
+
         for epoch in range(1, epochs + 1):
             training_loss: float = do_train(model=self.model, train_loader=train_loader, optimiser=optimiser,
                                             loss_function=loss_function, device=device)
@@ -39,10 +49,18 @@ class FeaturePredictorTrainer:
             validation_loss, validation_accuracy = evaluate(model=self.model, validation_loader=validation_loader,
                                                             loss_function=loss_function, device=device)
 
-            logging.info("Epoch: {}, Training Loss: {:.2f}, Validation Loss: {:.2f}, accuracy: {:.2f}".format(epoch,
+            logging.info("Epoch: {}, training Loss: {:.2f}, validation Loss: {:.2f}, accuracy: {:.2f}".format(epoch,
                                                                                                               training_loss,
                                                                                                               validation_loss,
                                                                                                               validation_accuracy))
+
+            if validation_accuracy > best_accuracy:
+                best_accuracy = validation_accuracy
+                self.save_model_state()
+
+        training_time: float = time.time() - train_start
+        logging.info('Training complete in {:.0f}m {:.0f}s'.format(training_time // 60, training_time % 60))
+        logging.info('Best accuracy: {}'.format(best_accuracy))
 
 
 def do_train(model, train_loader: DataLoader, optimiser: Optimizer, loss_function, device) -> float:
