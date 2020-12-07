@@ -1,4 +1,5 @@
 import logging
+from typing import Tuple, List
 
 import torch
 import torch.nn.functional as F
@@ -31,70 +32,87 @@ class FeaturePredictorTrainer:
     def train_predictor(self, epochs: int, train_loader: DataLoader, validation_loader: DataLoader,
                         optimiser: Optimizer, loss_function, device):
         for epoch in range(1, epochs + 1):
-            training_loss: float = self.do_train(train_loader=train_loader, optimiser=optimiser,
-                                                 loss_function=loss_function, device=device)
+            training_loss: float = do_train(model=self.model, train_loader=train_loader, optimiser=optimiser,
+                                            loss_function=loss_function, device=device)
             validation_loss: float
             validation_accuracy: float
-            validation_loss, validation_accuracy = self.evaluate(validation_loader=validation_loader,
-                                                                 loss_function=loss_function, device=device)
+            validation_loss, validation_accuracy = evaluate(model=self.model, validation_loader=validation_loader,
+                                                            loss_function=loss_function, device=device)
 
             logging.info("Epoch: {}, Training Loss: {:.2f}, Validation Loss: {:.2f}, accuracy: {:.2f}".format(epoch,
                                                                                                               training_loss,
                                                                                                               validation_loss,
                                                                                                               validation_accuracy))
 
-    def do_train(self, train_loader: DataLoader, optimiser: Optimizer, loss_function, device) -> float:
 
-        self.model.train()
+def do_train(model, train_loader: DataLoader, optimiser: Optimizer, loss_function, device) -> float:
+    model.train()
 
-        training_loss: float = 0.0
+    loss_per_batch: List[Tuple[float, int]] = []
 
-        for training_batch in train_loader:
-            optimiser.zero_grad()
-            images: Tensor
-            classes: Tensor
+    for training_batch in train_loader:
+        optimiser.zero_grad()
+        images: Tensor
+        classes: Tensor
 
-            images, classes_in_batch = training_batch
-            images.to(device)
-            classes_in_batch.to(device)
+        images, classes_in_batch = training_batch
+        images.to(device)
+        classes_in_batch.to(device)
 
-            model_output = self.model(images)
-            training_loss = loss_function(model_output, classes_in_batch)
-            training_loss.backward()
-            optimiser.step()
+        model_output: Tensor = model(images)
+        training_loss: Tensor = loss_function(model_output, classes_in_batch)
 
-            training_loss += training_loss.data.item() * images.size(0)
+        training_loss.backward()
+        optimiser.step()
 
-        training_loss = training_loss / len(train_loader.dataset)
-        return training_loss
+        logging.debug(
+            "training_loss.data.item() {} images.size(0) {}".format(training_loss.data.item(), images.size(0)))
+        loss_per_batch.append((training_loss.data.item(), images.size(0)))
 
-    def evaluate(self, validation_loader: DataLoader, loss_function, device):
+    total_loss: float = calculate_epoch_metric(metrics_per_batch=loss_per_batch)
+    return total_loss
 
-        self.model.eval()
 
-        correct_predictions: int = 0
-        evaluations: int = 0
-        validation_loss: float = 0.0
+def evaluate(model, validation_loader: DataLoader, loss_function, device) -> Tuple[float, float]:
+    model.eval()
 
-        for validation_batch in validation_loader:
-            images: Tensor
-            classes: Tensor
+    loss_per_batch: List[Tuple[float, int]] = []
+    accuracy_per_batch: List[Tuple[float, int]] = []
 
-            images, classes_in_batch = validation_batch
-            images.to(device)
-            classes_in_batch.to(device)
+    for validation_batch in validation_loader:
+        images: Tensor
+        classes: Tensor
 
-            model_output = self.model(images)
-            validation_loss = loss_function(model_output, classes_in_batch)
-            validation_loss += validation_loss.data.item() * images.size(0)
+        images, classes_in_batch = validation_batch
+        images.to(device)
+        classes_in_batch.to(device)
 
-            class_by_model = torch.max(F.softmax(model_output), dim=1)[1]
-            model_matches = torch.eq(class_by_model, classes_in_batch).view(-1)
+        model_output: Tensor = model(images)
+        validation_loss: Tensor = loss_function(model_output, classes_in_batch)
 
-            correct_predictions += torch.sum(model_matches).item()
-            evaluations += model_matches.shape[0]
+        loss_per_batch.append((validation_loss.data.item(), images.size(0)))
+        batch_matches, batch_evaluation = predict_and_evaluate(model_output=model_output, real_labels=classes_in_batch)
+        accuracy_per_batch.append((batch_matches / batch_evaluation, 1))
 
-        validation_loss = validation_loss / len(validation_loader)
-        validation_accuracy = correct_predictions / evaluations
+    total_loss: float = calculate_epoch_metric(metrics_per_batch=loss_per_batch)
+    total_accuracy: float = calculate_epoch_metric(metrics_per_batch=accuracy_per_batch)
 
-        return validation_loss, validation_accuracy
+    return total_loss, total_accuracy
+
+
+def predict_and_evaluate(model_output: Tensor, real_labels: Tensor) -> Tuple[float, float]:
+    class_by_model = torch.max(F.softmax(model_output), dim=1)[1]
+    model_matches = torch.eq(class_by_model, real_labels).view(-1)
+
+    correct_predictions = torch.sum(model_matches).item()
+    evaluations = model_matches.shape[0]
+
+    logging.debug("correct_predictions {} evaluations {} ".format(correct_predictions, evaluations))
+    return correct_predictions, evaluations
+
+
+def calculate_epoch_metric(metrics_per_batch: List[Tuple[float, int]]) -> float:
+    total_sum: float = sum([batch_metric * images for batch_metric, images in metrics_per_batch])
+    total_images: int = sum([images for _, images in metrics_per_batch])
+
+    return total_sum / total_images
