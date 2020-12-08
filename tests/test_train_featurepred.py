@@ -19,9 +19,3 @@ class TestFeaturePredictionTrain(TestCase):
 
         self.assertEqual(correct_predictions, 2)
         self.assertEqual(evaluations, 3)
-
-    def test_calculate_batch_loss(self):
-        loss_per_batch: List[Tuple[float, int]] = [(.2, 2), (.4, 2), (.5, 1)]
-        batch_loss: float = calculate_epoch_metric(metrics_per_batch=loss_per_batch)
-
-        self.assertEqual(batch_loss, 0.34)

@@ -1,11 +1,10 @@
 import logging
 from typing import List, Dict
 
-import torchvision
+import matplotlib.pyplot as plt
+import numpy as np
 from matplotlib.axes import Axes
 from torch import Tensor
-import numpy as np
-import matplotlib.pyplot as plt
 
 
 def denormalize_and_show(images_tensor: Tensor, means: List[float], standard_devs: List[float],
@@ -20,16 +19,6 @@ def denormalize_and_show(images_tensor: Tensor, means: List[float], standard_dev
         plt.title(title)
 
     plt.imshow(images_to_plot)
-
-
-def plot_grid(images: Tensor, classes: Tensor, class_names: Dict[int, str], means: List[float],
-              standard_devs: List[float], file_name: str) -> None:
-    image_grid: Tensor = torchvision.utils.make_grid(images, nrow=len(classes))
-    labels: List[str] = [class_names[class_index] for class_index in classes]
-    denormalize_and_show(images_tensor=image_grid, means=means,
-                         standard_devs=standard_devs, title=str(labels))
-    plt.savefig(fname=file_name, bbox_inches='tight')
-    logging.info("Image saved at {}".format(file_name))
 
 
 def plot_images_with_labels(images: Tensor, classes: Tensor, class_names: Dict[int, str], file_name: str,

@@ -12,8 +12,8 @@ from utils.image import plot_images_with_labels
 
 
 def start_training(trainer: FeaturePredictorTrainer, train_loader: DataLoader, validation_loader: DataLoader,
-                   epochs: int):
-    optimiser = optim.Adam(params=resnet50_model.parameters(), lr=learning_rate)
+                   epochs: int, model: Module, learning_rate: float):
+    optimiser = optim.Adam(params=model.parameters(), lr=learning_rate)
     loss_function = torch.nn.CrossEntropyLoss()
     device = torch.device("cpu")
     if torch.cuda.is_available():
@@ -33,10 +33,10 @@ if __name__ == "__main__":
                                                                linear_out_features=linear_out_features,
                                                                model_state_file='feature_predictor.pt')
 
-    epochs: int = 5
+    epochs: int = 24
     train_image_folder: str = 'data/feature_data/train'
     validation_image_folder: str = 'data/feature_data/val'
-    batch_size: int = 64
+    batch_size: int = 4
     learning_rate: float = 0.001
     train_dataloader_builder: ResNet50DataLoaderBuilder = ResNet50DataLoaderBuilder(image_folder=train_image_folder,
                                                                                     batch_size=batch_size)
@@ -51,7 +51,8 @@ if __name__ == "__main__":
         image_folder=validation_image_folder,
         batch_size=batch_size)
     validation_loader: DataLoader = valid_data_loader_builder.build()
-    start_training(trainer=trainer, train_loader=train_loader, validation_loader=validation_loader, epochs=epochs)
+    start_training(trainer=trainer, train_loader=train_loader, validation_loader=validation_loader, epochs=epochs,
+                   model=resnet50_model, learning_rate=learning_rate)
 
     trainer.load_model_from_file()
     trainer.model.eval()

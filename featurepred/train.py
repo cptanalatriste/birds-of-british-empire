@@ -70,8 +70,8 @@ class FeaturePredictorTrainer:
 def do_train(model, train_loader: DataLoader, optimiser: Optimizer, loss_function, device) -> float:
     model.train()
 
-    loss_per_batch: List[Tuple[float, int]] = []
-
+    total_images: int = len(train_loader.dataset)
+    running_loss: float = 0.0
     for training_batch in train_loader:
         optimiser.zero_grad()
         images: Tensor
@@ -87,19 +87,19 @@ def do_train(model, train_loader: DataLoader, optimiser: Optimizer, loss_functio
         training_loss.backward()
         optimiser.step()
 
-        logging.debug(
-            "training_loss.data.item() {} images.size(0) {}".format(training_loss.data.item(), images.size(0)))
-        loss_per_batch.append((training_loss.data.item(), images.size(0)))
+        images_in_batch: int = images.size(0)
+        running_loss += training_loss.data.item() * images_in_batch
 
-    total_loss: float = calculate_epoch_metric(metrics_per_batch=loss_per_batch)
+    total_loss: float = running_loss / total_images
     return total_loss
 
 
 def evaluate(model, validation_loader: DataLoader, loss_function, device) -> Tuple[float, float]:
     model.eval()
 
-    loss_per_batch: List[Tuple[float, int]] = []
-    accuracy_per_batch: List[Tuple[float, int]] = []
+    total_images: int = len(validation_loader.dataset)
+    running_loss: float = 0.0
+    running_matches: float = 0.0
 
     for validation_batch in validation_loader:
         images: Tensor
@@ -111,13 +111,14 @@ def evaluate(model, validation_loader: DataLoader, loss_function, device) -> Tup
 
         model_output: Tensor = model(images)
         validation_loss: Tensor = loss_function(model_output, classes_in_batch)
+        batch_matches, _ = predict_and_evaluate(model_output=model_output, real_labels=classes_in_batch)
 
-        loss_per_batch.append((validation_loss.data.item(), images.size(0)))
-        batch_matches, batch_evaluation = predict_and_evaluate(model_output=model_output, real_labels=classes_in_batch)
-        accuracy_per_batch.append((batch_matches / batch_evaluation, 1))
+        images_in_batch: int = images.size(0)
+        running_loss += validation_loss.data.item() * images_in_batch
+        running_matches += batch_matches
 
-    total_loss: float = calculate_epoch_metric(metrics_per_batch=loss_per_batch)
-    total_accuracy: float = calculate_epoch_metric(metrics_per_batch=accuracy_per_batch)
+    total_loss: float = running_loss / total_images
+    total_accuracy: float = running_matches / total_images
 
     return total_loss, total_accuracy
 
@@ -136,10 +137,3 @@ def predict_and_evaluate(model_output: Tensor, real_labels: Tensor) -> Tuple[flo
 def output_to_predictions(model_output: Tensor) -> Tensor:
     class_by_model = torch.max(F.softmax(model_output), dim=1)[1]
     return class_by_model
-
-
-def calculate_epoch_metric(metrics_per_batch: List[Tuple[float, int]]) -> float:
-    total_sum: float = sum([batch_metric * images for batch_metric, images in metrics_per_batch])
-    total_images: int = sum([images for _, images in metrics_per_batch])
-
-    return total_sum / total_images
