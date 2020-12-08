@@ -23,13 +23,14 @@ class FeaturePredictorTrainer:
         self.model.fc = nn.Sequential(
             nn.Linear(in_features=classifier_block_features, out_features=linear_out_features),
             nn.ReLU(),
-            nn.Dropout(),
             nn.Linear(in_features=linear_out_features, out_features=2)
         )
 
-    def load_model_from_file(self) -> None:
+    def load_model_from_file(self, device: str) -> None:
         self.model.load_state_dict(torch.load(self.model_state_file))
-        logging.info("Model state loaded from {}".format(self.model_state_file))
+        self.model = self.model.to(device)
+
+        logging.info("Model state loaded from {} to device {}".format(self.model_state_file, device))
 
     def freeze_layers(self):
         for name, parameter in self.model.named_parameters():
@@ -41,6 +42,8 @@ class FeaturePredictorTrainer:
 
     def train_predictor(self, epochs: int, train_loader: DataLoader, validation_loader: DataLoader,
                         optimiser: Optimizer, loss_function, device):
+        self.model = self.model.to(device)
+
         train_start: float = time.time()
         best_accuracy: float = 0.0
         self.save_model_state()
@@ -78,12 +81,13 @@ def do_train(model, train_loader: DataLoader, optimiser: Optimizer, loss_functio
         classes: Tensor
 
         images, classes_in_batch = training_batch
-        images.to(device)
-        classes_in_batch.to(device)
+        images = images.to(device)
+        classes_in_batch = classes_in_batch.to(device)
 
         model_output: Tensor = model(images)
         training_loss: Tensor = loss_function(model_output, classes_in_batch)
 
+        optimiser.zero_grad()
         training_loss.backward()
         optimiser.step()
 
@@ -106,8 +110,8 @@ def evaluate(model, validation_loader: DataLoader, loss_function, device) -> Tup
         classes: Tensor
 
         images, classes_in_batch = validation_batch
-        images.to(device)
-        classes_in_batch.to(device)
+        images = images.to(device)
+        classes_in_batch = classes_in_batch.to(device)
 
         model_output: Tensor = model(images)
         validation_loss: Tensor = loss_function(model_output, classes_in_batch)

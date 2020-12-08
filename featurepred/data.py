@@ -24,16 +24,26 @@ ABSENT_ATTRIBUTE_VALUE: int = 0
 
 class ResNet50DataLoaderBuilder:
 
-    def __init__(self, image_folder: str, batch_size: int):
+    def __init__(self, image_folder: str, batch_size: int, input_resize: int, is_training: bool):
         self.means: List[float] = [0.485, 0.456, 0.406]
         self.std_devs: List[float] = [0.229, 0.224, 0.225]
 
-        self.image_transformations: Compose = transforms.Compose([
-            transforms.Resize(size=(64, 64)),
-            transforms.ToTensor(),
-            transforms.Normalize(mean=self.means,
-                                 std=self.std_devs)
-        ])
+        if is_training:
+            self.image_transformations: Compose = transforms.Compose([
+                transforms.Resize(size=(input_resize, input_resize)),
+                transforms.RandomAffine(0, shear=10, scale=(0.8, 1.2)),
+                transforms.RandomHorizontalFlip(),
+                transforms.ToTensor(),
+                transforms.Normalize(mean=self.means,
+                                     std=self.std_devs)
+            ])
+        else:
+            self.image_transformations: Compose = transforms.Compose([
+                transforms.Resize(size=(input_resize, input_resize)),
+                transforms.ToTensor(),
+                transforms.Normalize(mean=self.means,
+                                     std=self.std_devs)
+            ])
 
         self.image_folder: ImageFolder = ImageFolder(root=image_folder, transform=self.image_transformations,
                                                      is_valid_file=can_open_image_file)
