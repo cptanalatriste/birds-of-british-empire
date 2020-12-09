@@ -1,19 +1,14 @@
 import argparse
-import datetime
 import os
 import pprint
 import random
 import sys
 import time
 
-import dateutil.tz
-import numpy as np
-import torch
-import torchvision.transforms as transforms
+from attnganw.runner import set_random_seed, get_output_directory, get_text_dataset
+from attnganw.train import GanTrainerWrapper
 from datasets import TextDataset
 from miscc.config import cfg, cfg_from_file
-
-from attnganw.train import GanTrainerWrapper
 
 dir_path = (os.path.abspath(os.path.join(os.path.realpath(__file__), './.')))
 sys.path.append(dir_path)
@@ -50,16 +45,9 @@ if __name__ == "__main__":
         args.manualSeed = 100
     elif args.manualSeed is None:
         args.manualSeed = random.randint(1, 10000)
-    random.seed(args.manualSeed)
-    np.random.seed(args.manualSeed)
-    torch.manual_seed(args.manualSeed)
-    if cfg.CUDA:
-        torch.cuda.manual_seed_all(args.manualSeed)
 
-    now = datetime.datetime.now(dateutil.tz.tzlocal())
-    timestamp = now.strftime('%Y_%m_%d_%H_%M_%S')
-    output_dir = '../output/%s_%s_%s' % \
-                 (cfg.DATASET_NAME, cfg.CONFIG_NAME, timestamp)
+    set_random_seed(random_seed=args.manualSeed)
+    output_dir = get_output_directory(dataset_name=cfg.DATASET_NAME, config_name=cfg.CONFIG_NAME)
 
     split_dir, bshuffle = 'train', True
     if not cfg.TRAIN.FLAG:
@@ -67,14 +55,8 @@ if __name__ == "__main__":
         split_dir = 'test'
 
     # Get data loader
-    imsize = cfg.TREE.BASE_SIZE * (2 ** (cfg.TREE.BRANCH_NUM - 1))
-    image_transform = transforms.Compose([
-        transforms.Scale(int(imsize * 76 / 64)),
-        transforms.RandomCrop(imsize),
-        transforms.RandomHorizontalFlip()])
-    dataset = TextDataset(cfg.DATA_DIR, split_dir,
-                          base_size=cfg.TREE.BASE_SIZE,
-                          transform=image_transform)
+    dataset: TextDataset = get_text_dataset(tree_base_size=cfg.TREE.BASE_SIZE, tree_branch_number=cfg.TREE.BRANCH_NUM,
+                                            dataset_split=split_dir, data_directory=cfg.DATA_DIR)
     assert dataset
 
     # Define models and go to train/evaluate
