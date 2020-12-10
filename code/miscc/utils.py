@@ -26,15 +26,16 @@ COLOR_DIC = {0: [128, 64, 128], 1: [244, 35, 232],
 FONT_MAX = 50
 
 
-def drawCaption(convas, captions, ixtoword, vis_size, off1=2, off2=2):
+def drawCaption(convas, captions, ixtoword, vis_size, off1=2, off2=2,
+                font_location=None):
+    if font_location is None:
+        font_location = '/System/Library/Fonts/SFNSMono.ttf'
+
     num = captions.size(0)
     img_txt = Image.fromarray(convas)
     # get a font
     # fnt = None
-    # This font works in Windows
-    fnt = ImageFont.truetype('C:\Windows\Fonts\\arialbd.ttf', 50)
-    # This font works in MacOS
-    # fnt = ImageFont.truetype("/System/Library/Fonts/SFNSMono.ttf", 50)
+    fnt = ImageFont.truetype(font_location, 50)
     # get a drawing context
     d = ImageDraw.Draw(img_txt)
     sentence_list = []
@@ -179,7 +180,7 @@ def build_super_images(real_imgs, captions, ixtoword,
 
 
 def decode_attention_maps(batch_images, batch_captions, caption_lengths, index_to_word,
-                          attention_maps, attention_map_size, vis_size=256, top_k_most_attended=5):
+                          attention_maps, attention_map_size, font_location=None, vis_size=256, top_k_most_attended=5):
     batch_size = batch_images.size(0)
     max_word_num = np.max(caption_lengths)
     text_convas = np.ones([batch_size * FONT_MAX,
@@ -201,7 +202,7 @@ def decode_attention_maps(batch_images, batch_captions, caption_lengths, index_t
     num = len(attention_maps)
 
     text_map, sentences = \
-        drawCaption(text_convas, batch_captions, index_to_word, vis_size, off1=0)
+        drawCaption(text_convas, batch_captions, index_to_word, vis_size, off1=0, font_location=font_location)
     text_map = np.asarray(text_map).astype(np.uint8)
 
     bUpdate = 1

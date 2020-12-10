@@ -1,16 +1,15 @@
 import random
 from datetime import datetime
+from typing import List
 
 import dateutil
 import numpy as np
 import torch
-
+from datasets import TextDataset
 from miscc.config import cfg_from_file, cfg
 from torchvision.transforms import transforms
 
-from datasets import TextDataset
-
-from attnganw.train import GanTrainerWrapper
+from attnganw.train import GanTrainerWrapper, BirdGenerationResult
 
 
 def set_random_seed(random_seed: int) -> None:
@@ -45,7 +44,7 @@ def get_output_directory(dataset_name: str, config_name: str) -> str:
     return output_directory
 
 
-def generate_images(config_file: str, gpu_id: int, random_seed: int):
+def generate_images(config_file: str, gpu_id: int, random_seed: int) -> List[BirdGenerationResult]:
     cfg_from_file(config_file)
     cfg.GPU_ID = gpu_id
 

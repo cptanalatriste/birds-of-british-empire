@@ -7,6 +7,12 @@ import torch
 import torch.backends.cudnn as cudnn
 import torch.optim as optim
 from PIL import Image
+from six.moves import range
+from torch.autograd import Variable
+
+from attnganw.extmodel import TextEncoderWrapper, GenerativeNetworkWrapper
+# ################# Text to image task############################ #
+from attnganw.image import ImageDecoder
 from datasets import prepare_data
 from miscc.config import cfg
 from miscc.losses import discriminator_loss, generator_loss, KL_loss
@@ -16,12 +22,6 @@ from miscc.utils import mkdir_p
 from miscc.utils import weights_init, load_params, copy_G_params
 from model import G_DCGAN, G_NET
 from model import RNN_ENCODER, CNN_ENCODER
-from six.moves import range
-from torch.autograd import Variable
-
-# ################# Text to image task############################ #
-from attnganw.image import ImageDecoder
-from attnganw.extmodel import TextEncoderWrapper, GenerativeNetworkWrapper
 
 
 class condGANTrainer(object):
@@ -433,7 +433,7 @@ class condGANTrainer(object):
                         fullpath = '%s_s%d.png' % (s_tmp, k)
                         im.save(fullpath)
 
-    def generate_examples(self, captions_per_file: Dict[str, List], noise_vector_generator):
+    def generate_examples(self, captions_per_file: Dict[str, List], noise_vector_generator) -> List[Dict]:
         if cfg.TRAIN.NET_G == '':
             print('Error: the path for morels is not found!')
         else:
@@ -450,6 +450,7 @@ class condGANTrainer(object):
             # the path to save generated images
             s_tmp = cfg.TRAIN.NET_G[:cfg.TRAIN.NET_G.rfind('.pth')]
 
+            generated_images_data: List[Dict] = []
             with torch.no_grad():
                 for file_as_key in captions_per_file:
                     save_dir = '%s/%s' % (s_tmp, file_as_key)
@@ -467,6 +468,9 @@ class condGANTrainer(object):
                     for noise_vector_index, noise_vector in enumerate(noise_vector_generator(batch_size=batch_size,
                                                                                              noise_vector_size=cfg.GAN.Z_DIM,
                                                                                              gpu_id=cfg.GPU_ID)):
+
+                        image_data: Dict = {'file_as_key': file_as_key,
+                                            'noise_vector': noise_vector}
 
                         word_features, sentence_features = text_encoder_wrapper.extract_semantic_vectors(
                             text_descriptions=captions,
@@ -486,11 +490,20 @@ class condGANTrainer(object):
                         for batch_index in range(batch_size):
                             save_name = '%s/vector_%d_caption_%d' % (save_dir, noise_vector_index,
                                                                      sorted_indices[batch_index])
-                            image_decoder.decode_generated_images(batch_index=batch_index, file_prefix=save_name,
-                                                                  generated_images=generated_images)
+                            generated_images_files: List[str] = image_decoder.decode_generated_images(
+                                batch_index=batch_index,
+                                file_prefix=save_name,
+                                generated_images=generated_images)
+                            image_data['generated_images_{}'.format(batch_index)] = generated_images_files
 
-                            image_decoder.decode_attention_maps(batch_index=batch_index, file_prefix=save_name,
-                                                                attention_maps=attention_maps,
-                                                                generated_images=generated_images,
-                                                                captions=captions, caption_lenghts=cap_lens_np,
-                                                                index_to_word=self.ixtoword)
+                            attention_map_files: List[str] = image_decoder.decode_attention_maps(
+                                batch_index=batch_index, file_prefix=save_name,
+                                attention_maps=attention_maps,
+                                generated_images=generated_images,
+                                captions=captions, caption_lenghts=cap_lens_np,
+                                index_to_word=self.ixtoword)
+
+                            image_data['attention_map_files_{}'.format(batch_index)] = attention_map_files
+
+                        generated_images_data.append(image_data)
+            return generated_images_data
