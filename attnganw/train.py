@@ -1,6 +1,7 @@
 import logging
 from typing import Dict, List, NamedTuple
 
+import numpy as np
 from datasets import TextDataset
 from torch import Tensor
 from torch.utils.data import DataLoader
@@ -13,6 +14,7 @@ from attnganw.text import TextProcessor, directory_to_trainer_input, get_lines_f
 
 class BirdGenerationFromCaption(NamedTuple):
     file_as_key: str
+    noise_vector: np.ndarray
     caption_index: int
     attention_map_0: str
     attention_map_1: str

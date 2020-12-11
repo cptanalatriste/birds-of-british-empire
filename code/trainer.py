@@ -12,7 +12,7 @@ from torch.autograd import Variable
 
 from attnganw.extmodel import TextEncoderWrapper, GenerativeNetworkWrapper
 # ################# Text to image task############################ #
-from attnganw.image import ImageDecoder
+from attnganw.image import ImageDecoder, extract_noise_vector
 from datasets import prepare_data
 from miscc.config import cfg
 from miscc.losses import discriminator_loss, generator_loss, KL_loss
@@ -465,9 +465,10 @@ class condGANTrainer(object):
                         captions = captions.cuda()
                         caption_lengths = caption_lengths.cuda()
 
-                    for noise_vector_index, noise_vector in enumerate(noise_vector_generator(batch_size=num_captions,
-                                                                                             noise_vector_size=cfg.GAN.Z_DIM,
-                                                                                             gpu_id=cfg.GPU_ID)):
+                    for noise_vector_index, file_noise_vector in enumerate(
+                            noise_vector_generator(batch_size=num_captions,
+                                                   noise_vector_size=cfg.GAN.Z_DIM,
+                                                   gpu_id=cfg.GPU_ID)):
 
                         word_features, sentence_features = text_encoder_wrapper.extract_semantic_vectors(
                             text_descriptions=captions,
@@ -475,7 +476,7 @@ class condGANTrainer(object):
                         mask = (captions == 0)
 
                         generated_images, attention_maps = gen_network_wrapper. \
-                            generate_images(noise_vector=noise_vector,
+                            generate_images(noise_vector=file_noise_vector,
                                             word_features=word_features,
                                             sentence_features=sentence_features,
                                             mask=mask)
@@ -486,7 +487,9 @@ class condGANTrainer(object):
                         image_decoder: ImageDecoder = ImageDecoder()
                         for caption_index in range(num_captions):
                             image_data: Dict = {'file_as_key': file_as_key,
-                                                'caption_index': sorted_indices[caption_index]}
+                                                'caption_index': sorted_indices[caption_index],
+                                                'noise_vector': extract_noise_vector(caption_index=caption_index,
+                                                                                     file_noise_vector=file_noise_vector)}
 
                             save_name = '%s/vector_%d_caption_%d' % (save_dir, noise_vector_index,
                                                                      sorted_indices[caption_index])

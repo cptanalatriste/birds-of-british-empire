@@ -60,3 +60,8 @@ class ImageDecoder:
                 generated_files.append(file_path)
 
         return generated_files
+
+
+def extract_noise_vector(caption_index, file_noise_vector: Tensor) -> np.ndarray:
+    noise_as_array: np.ndarray = file_noise_vector[caption_index].data.cpu().numpy()
+    return noise_as_array

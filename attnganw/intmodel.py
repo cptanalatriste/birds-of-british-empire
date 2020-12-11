@@ -1,3 +1,4 @@
+import logging
 from typing import Tuple
 
 from torch import nn, Tensor
@@ -23,6 +24,7 @@ class ConditioningAugmentationWrapper:
         if config.generation['do_conditioning_augmentation']:
             epsilon = get_single_normal_vector(shape=diag_covariance_matrix.size(), gpu_id=self.gpu_id)[0]
         else:
+            logging.info("Conditional augmentation is disabled: epsilon = 0")
             epsilon = get_zeroes(shape=diag_covariance_matrix.size(), gpu_id=self.gpu_id)
 
         epsilon_variable = Variable(epsilon)
