@@ -5,7 +5,7 @@ import torch
 from torch import Tensor
 
 from attnganw import config
-from attnganw.random import get_vector_interpolation
+from attnganw.randomutils import get_vector_interpolation
 
 
 class TestInterpolation(TestCase):

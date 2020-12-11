@@ -9,7 +9,7 @@ from datasets import TextDataset
 from miscc.config import cfg_from_file, cfg
 from torchvision.transforms import transforms
 
-from attnganw.train import GanTrainerWrapper, BirdGenerationResult
+from attnganw.train import GanTrainerWrapper, BirdGenerationFromCaption
 
 
 def set_random_seed(random_seed: int) -> None:
@@ -44,7 +44,7 @@ def get_output_directory(dataset_name: str, config_name: str) -> str:
     return output_directory
 
 
-def generate_images(config_file: str, gpu_id: int, random_seed: int) -> List[BirdGenerationResult]:
+def generate_images(config_file: str, gpu_id: int, random_seed: int) -> List[BirdGenerationFromCaption]:
     cfg_from_file(config_file)
     cfg.GPU_ID = gpu_id
 
@@ -68,4 +68,7 @@ def generate_images(config_file: str, gpu_id: int, random_seed: int) -> List[Bir
                                                                data_loader_workers=int(cfg.WORKERS),
                                                                split_directory=dataset_split)
 
-    gan_trainer_wrapper.generate_examples(data_directory=cfg.DATA_DIR)
+    return gan_trainer_wrapper.generate_examples(data_directory=cfg.DATA_DIR)
+
+
+

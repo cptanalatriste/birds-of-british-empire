@@ -16,10 +16,10 @@ class ImageDecoder:
         self.generated_format = '%s_generator_%d.png'
         self.attention_map_format = '%s_attn_model_stage_%d.png'
 
-    def decode_generated_images(self, batch_index: int, file_prefix: str, generated_images: Tensor) -> List[str]:
+    def decode_generated_images(self, caption_index: int, file_prefix: str, generated_images: Tensor) -> List[str]:
         generated_image_files: List[str] = []
         for generator_index in range(len(generated_images)):
-            image_as_array: np.ndarray = generated_images[generator_index][batch_index].data.cpu().numpy()
+            image_as_array: np.ndarray = generated_images[generator_index][caption_index].data.cpu().numpy()
             image_as_array = (image_as_array + 1.0) * 127.5
             image_as_array = image_as_array.astype(np.uint8)
             image_as_array = np.transpose(image_as_array, (1, 2, 0))
@@ -32,7 +32,7 @@ class ImageDecoder:
         return generated_image_files
 
     def decode_attention_maps(self, batch_index: int, file_prefix: str, attention_maps: Tensor,
-                              generated_images: Tensor, captions: Tensor, caption_lenghts: Tensor,
+                              generated_images: Tensor, captions: Tensor, caption_lengths: Tensor,
                               index_to_word: Dict[int, str]) -> List[str]:
 
         generated_files: List[str] = []
@@ -46,7 +46,7 @@ class ImageDecoder:
             img_set, sentences = \
                 decode_attention_maps(batch_images=im[batch_index].unsqueeze(0),
                                       batch_captions=captions[batch_index].unsqueeze(0),
-                                      caption_lengths=[caption_lenghts[batch_index]],
+                                      caption_lengths=[caption_lengths[batch_index]],
                                       index_to_word=index_to_word,
                                       attention_maps=[current_attention_map[batch_index]],
                                       attention_map_size=attention_map_size,

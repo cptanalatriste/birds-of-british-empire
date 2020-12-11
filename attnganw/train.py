@@ -7,17 +7,18 @@ from torch.utils.data import DataLoader
 from trainer import condGANTrainer
 
 from attnganw import config
-from attnganw.random import get_single_normal_vector, get_vector_interpolation
+from attnganw.randomutils import get_single_normal_vector, get_vector_interpolation
 from attnganw.text import TextProcessor, directory_to_trainer_input, get_lines_from_file
 
 
-class BirdGenerationResult(NamedTuple):
-    noise_vector: Tensor
-    attention_map_0_file: str
-    attention_map_1_file: str
-    generator_output_0_file: str
-    generator_output_2_file: str
-    generator_output_3_file: str
+class BirdGenerationFromCaption(NamedTuple):
+    file_as_key: str
+    caption_index: int
+    attention_map_0: str
+    attention_map_1: str
+    image_from_generator_0: str
+    image_from_generator_1: str
+    image_from_generator_2: str
 
 
 class GanTrainerWrapper:
@@ -46,7 +47,7 @@ class GanTrainerWrapper:
     def sample(self):
         self.gan_trainer.sampling(self.data_split)
 
-    def generate_examples(self, data_directory: str):
+    def generate_examples(self, data_directory: str) -> List[BirdGenerationFromCaption]:
         logging.basicConfig(level=logging.DEBUG)
         text_processor: TextProcessor = TextProcessor(word_to_index=self.word_to_index)
 
@@ -70,7 +71,8 @@ class GanTrainerWrapper:
             generated_images_data = self.gan_trainer.generate_examples(captions_per_file=captions_per_file,
                                                                        noise_vector_generator=default_noise_vector_generator)
 
-        logging.info("{} files processed for image generation".format(len(generated_images_data)))
+        logging.info("{} captions processed.".format(len(generated_images_data)))
+        return [BirdGenerationFromCaption(**caption_metadata) for caption_metadata in generated_images_data]
 
 
 def default_noise_vector_generator(batch_size: int, noise_vector_size: int, gpu_id: int) -> List[Tensor]:

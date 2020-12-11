@@ -4,7 +4,7 @@ from torch import nn, Tensor
 from torch.autograd import Variable
 
 from attnganw import config
-from attnganw.random import get_single_normal_vector, get_zeroes
+from attnganw.randomutils import get_single_normal_vector, get_zeroes
 
 
 class ConditioningAugmentationWrapper:

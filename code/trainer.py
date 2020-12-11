@@ -457,7 +457,7 @@ class condGANTrainer(object):
                     mkdir_p(save_dir)
                     captions, caption_lengths, sorted_indices = captions_per_file[file_as_key]
 
-                    batch_size = captions.shape[0]
+                    num_captions = captions.shape[0]
                     captions = torch.from_numpy(captions)
                     caption_lengths = torch.from_numpy(caption_lengths)
 
@@ -465,12 +465,9 @@ class condGANTrainer(object):
                         captions = captions.cuda()
                         caption_lengths = caption_lengths.cuda()
 
-                    for noise_vector_index, noise_vector in enumerate(noise_vector_generator(batch_size=batch_size,
+                    for noise_vector_index, noise_vector in enumerate(noise_vector_generator(batch_size=num_captions,
                                                                                              noise_vector_size=cfg.GAN.Z_DIM,
                                                                                              gpu_id=cfg.GPU_ID)):
-
-                        image_data: Dict = {'file_as_key': file_as_key,
-                                            'noise_vector': noise_vector}
 
                         word_features, sentence_features = text_encoder_wrapper.extract_semantic_vectors(
                             text_descriptions=captions,
@@ -487,23 +484,27 @@ class condGANTrainer(object):
                         cap_lens_np = caption_lengths.cpu().data.numpy()
 
                         image_decoder: ImageDecoder = ImageDecoder()
-                        for batch_index in range(batch_size):
+                        for caption_index in range(num_captions):
+                            image_data: Dict = {'file_as_key': file_as_key,
+                                                'caption_index': sorted_indices[caption_index]}
+
                             save_name = '%s/vector_%d_caption_%d' % (save_dir, noise_vector_index,
-                                                                     sorted_indices[batch_index])
+                                                                     sorted_indices[caption_index])
                             generated_images_files: List[str] = image_decoder.decode_generated_images(
-                                batch_index=batch_index,
+                                caption_index=caption_index,
                                 file_prefix=save_name,
                                 generated_images=generated_images)
-                            image_data['generated_images_{}'.format(batch_index)] = generated_images_files
+                            for generator_index, image_file in enumerate(generated_images_files):
+                                image_data['image_from_generator_{}'.format(generator_index)] = image_file
 
                             attention_map_files: List[str] = image_decoder.decode_attention_maps(
-                                batch_index=batch_index, file_prefix=save_name,
+                                batch_index=caption_index, file_prefix=save_name,
                                 attention_maps=attention_maps,
                                 generated_images=generated_images,
-                                captions=captions, caption_lenghts=cap_lens_np,
+                                captions=captions, caption_lengths=cap_lens_np,
                                 index_to_word=self.ixtoword)
+                            for attn_map_index, image_file in enumerate(attention_map_files):
+                                image_data['attention_map_{}'.format(attn_map_index)] = image_file
 
-                            image_data['attention_map_files_{}'.format(batch_index)] = attention_map_files
-
-                        generated_images_data.append(image_data)
+                            generated_images_data.append(image_data)
             return generated_images_data
