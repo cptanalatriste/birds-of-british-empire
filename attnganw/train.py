@@ -42,6 +42,7 @@ class GanTrainerWrapper:
                                                           data_loader=data_loader,
                                                           n_words=vocabulary_size,
                                                           ixtoword=index_to_word)
+        self.text_processor: TextProcessor = TextProcessor(word_to_index=self.word_to_index)
 
     def train(self):
         self.gan_trainer.train()
@@ -49,9 +50,15 @@ class GanTrainerWrapper:
     def sample(self):
         self.gan_trainer.sampling(self.data_split)
 
-    def generate_examples(self, data_directory: str) -> List[BirdGenerationFromCaption]:
-        logging.basicConfig(level=logging.DEBUG)
-        text_processor: TextProcessor = TextProcessor(word_to_index=self.word_to_index)
+    def generate_from_caption_list(self, identifier: str, caption_list: List[str]) -> List[BirdGenerationFromCaption]:
+        captions_per_file: Dict[str, List] = {identifier: caption_list}
+        generated_images_data = self.gan_trainer.generate_examples(captions_per_file=captions_per_file,
+                                                                   noise_vector_generator=default_noise_vector_generator)
+
+        logging.info("{} captions processed.".format(len(generated_images_data)))
+        return [BirdGenerationFromCaption(**caption_metadata) for caption_metadata in generated_images_data]
+
+    def generate_from_caption_files(self, data_directory: str) -> List[BirdGenerationFromCaption]:
 
         file_names: List[str]
         if config.generation['caption_file']:
@@ -62,7 +69,7 @@ class GanTrainerWrapper:
             file_names = ['%s/%s.txt' % (data_directory, file_name) for file_name in file_names]
 
         captions_per_file: Dict[str, List] = directory_to_trainer_input(file_names=file_names,
-                                                                        text_processor=text_processor)
+                                                                        text_processor=self.text_processor)
 
         generated_images_data: List[Dict]
         if config.generation['do_noise_interpolation']:

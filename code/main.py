@@ -75,7 +75,7 @@ if __name__ == "__main__":
         if cfg.B_VALIDATION:
             gan_trainer_wrapper.sample()  # generate images for the whole valid dataset
         else:
-            gan_trainer_wrapper.generate_examples(
+            gan_trainer_wrapper.generate_from_caption_files(
                 data_directory=cfg.DATA_DIR)  # generate images for customized captions
     end_t = time.time()
     print('Total time for training:', end_t - start_t)

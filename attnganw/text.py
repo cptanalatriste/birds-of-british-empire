@@ -3,6 +3,7 @@ from typing import List, Dict
 
 import numpy as np
 from nltk import RegexpTokenizer
+from torch import Tensor
 
 
 class TextProcessor:
@@ -47,35 +48,40 @@ class TextProcessor:
         return word_vector
 
 
+def caption_list_to_trainer_input(caption_list: List[str], text_processor: TextProcessor) -> List[np.ndarray]:
+    captions: List[List[int]] = []
+    caption_lengths: List[int] = []
+
+    for sent in caption_list:
+        rev: List[int] = text_processor.to_number_vector(text_to_encode=sent)
+        if len(rev) > 0:
+            captions.append(rev)
+            caption_lengths.append(len(rev))
+    max_len = np.max(caption_lengths)
+
+    sorted_indices = np.argsort(caption_lengths)[::-1]
+    caption_lengths = np.asarray(caption_lengths)
+    caption_lengths = caption_lengths[sorted_indices]
+    cap_array = np.zeros((len(captions), max_len), dtype='int64')
+    for i in range(len(captions)):
+        idx = sorted_indices[i]
+        cap = captions[idx]
+        c_len = len(cap)
+        cap_array[i, :c_len] = cap
+
+    return [cap_array, caption_lengths, sorted_indices]
+
+
 def directory_to_trainer_input(file_names: List[str], text_processor: TextProcessor) -> Dict[str, List]:
-    """generate images from example sentences"""
+    """generate images from example caption_list"""
     captions_per_file: Dict[str, List] = {}
     for file_name in file_names:
         print('Load examples from:', file_name)
-        sentences = get_lines_from_file(file_name)
-        # a list of indices for a sentence
-        captions: List[List[int]] = []
-        caption_lengths: List[int] = []
-
-        for sent in sentences:
-
-            rev: List[int] = text_processor.to_number_vector(text_to_encode=sent)
-            if len(rev) > 0:
-                captions.append(rev)
-                caption_lengths.append(len(rev))
-        max_len = np.max(caption_lengths)
-
-        sorted_indices = np.argsort(caption_lengths)[::-1]
-        caption_lengths = np.asarray(caption_lengths)
-        caption_lengths = caption_lengths[sorted_indices]
-        cap_array = np.zeros((len(captions), max_len), dtype='int64')
-        for i in range(len(captions)):
-            idx = sorted_indices[i]
-            cap = captions[idx]
-            c_len = len(cap)
-            cap_array[i, :c_len] = cap
+        caption_list: List[str] = get_lines_from_file(file_name)
         file_as_key = file_name[(file_name.rfind('/') + 1):]
-        captions_per_file[file_as_key] = [cap_array, caption_lengths, sorted_indices]
+
+        captions_per_file[file_as_key] = caption_list_to_trainer_input(caption_list=caption_list,
+                                                                       text_processor=text_processor)
     return captions_per_file
 
 

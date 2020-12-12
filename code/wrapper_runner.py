@@ -6,6 +6,8 @@ from attnganw.train import BirdGenerationFromCaption
 import pandas as pd
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO)
+
     run_config_file: str = 'cfg/eval_bird.yml'
     run_gpu_id: int = 0
     run_random_seed: int = 100

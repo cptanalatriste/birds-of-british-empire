@@ -68,7 +68,7 @@ def generate_images(config_file: str, gpu_id: int, random_seed: int) -> List[Bir
                                                                data_loader_workers=int(cfg.WORKERS),
                                                                split_directory=dataset_split)
 
-    return gan_trainer_wrapper.generate_examples(data_directory=cfg.DATA_DIR)
+    return gan_trainer_wrapper.generate_from_caption_files(data_directory=cfg.DATA_DIR)
 
 
 
