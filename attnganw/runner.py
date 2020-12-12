@@ -44,7 +44,8 @@ def get_output_directory(dataset_name: str, config_name: str) -> str:
     return output_directory
 
 
-def generate_images(config_file: str, gpu_id: int, random_seed: int) -> List[BirdGenerationFromCaption]:
+def generate_images(config_file: str, gpu_id: int, random_seed: int, identifier: str, caption_list: List[str]) -> List[
+    BirdGenerationFromCaption]:
     cfg_from_file(config_file)
     cfg.GPU_ID = gpu_id
 
@@ -68,7 +69,4 @@ def generate_images(config_file: str, gpu_id: int, random_seed: int) -> List[Bir
                                                                data_loader_workers=int(cfg.WORKERS),
                                                                split_directory=dataset_split)
 
-    return gan_trainer_wrapper.generate_from_caption_files(data_directory=cfg.DATA_DIR)
-
-
-
+    return gan_trainer_wrapper.generate_from_caption_list(identifier=identifier, caption_list=caption_list)

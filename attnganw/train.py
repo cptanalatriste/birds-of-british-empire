@@ -9,7 +9,7 @@ from trainer import condGANTrainer
 
 from attnganw import config
 from attnganw.randomutils import get_single_normal_vector, get_vector_interpolation
-from attnganw.text import TextProcessor, directory_to_trainer_input, get_lines_from_file
+from attnganw.text import TextProcessor, directory_to_trainer_input, get_lines_from_file, caption_list_to_trainer_input
 
 
 class BirdGenerationFromCaption(NamedTuple):
@@ -51,7 +51,10 @@ class GanTrainerWrapper:
         self.gan_trainer.sampling(self.data_split)
 
     def generate_from_caption_list(self, identifier: str, caption_list: List[str]) -> List[BirdGenerationFromCaption]:
-        captions_per_file: Dict[str, List] = {identifier: caption_list}
+
+        trainer_input: List[np.ndarray] = caption_list_to_trainer_input(caption_list=caption_list,
+                                                                        text_processor=self.text_processor)
+        captions_per_file: Dict[str, List] = {identifier: trainer_input}
         generated_images_data = self.gan_trainer.generate_examples(captions_per_file=captions_per_file,
                                                                    noise_vector_generator=default_noise_vector_generator)
 
