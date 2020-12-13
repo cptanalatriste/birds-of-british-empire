@@ -1,6 +1,7 @@
 import logging
 from typing import List
 
+from attnganw.randomutils import set_random_seed
 from attnganw.runner import generate_images
 from attnganw.train import BirdGenerationFromCaption
 import pandas as pd
@@ -8,34 +9,49 @@ import numpy as np
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
+    # logging.basicConfig(level=logging.DEBUG)
 
     run_config_file: str = 'cfg/eval_bird.yml'
     run_gpu_id: int = 0
     run_random_seed: int = 100
     metadata_file: str = 'metadata_file.csv'
     noise_vector_file: str = "noise_vectors_array.npy"
-    num_captions: int = 40
+    num_batches: int = 15
+    captions_per_batch: int = 40
+    # num_batches: int = 3
+    # captions_per_batch: int = 2
+
     caption: str = "bird"
-    identifier: str = "caption_list"
+    noise_vector_size: int = 100
 
-    caption_list: List[str] = [caption for _ in range(num_captions)]
-    # caption_list: List[str] = ["this bird is red with white and has a very short beak",
-    #                            "the bird has a yellow crown and a black eyering that is round",
-    #                            "this bird has a green crown black primaries and a white belly"]
+    set_random_seed(random_seed=100)
 
-    generated_files: List[BirdGenerationFromCaption] = generate_images(config_file=run_config_file, gpu_id=run_gpu_id,
-                                                                       random_seed=run_random_seed,
-                                                                       identifier=identifier,
-                                                                       caption_list=caption_list)
-    generated_files = sorted(generated_files, key=lambda generation_result: generation_result.caption_index)
+    num_images: int = num_batches * captions_per_batch
+    next_image_position: int = 0
+    all_noise_array: np.ndarray = np.zeros(shape=(num_images, noise_vector_size))
+    all_generated_files: List[BirdGenerationFromCaption] = []
 
-    all_noise_vectors: List[np.ndarray] = [generation_result.noise_vector for generation_result in generated_files]
-    noise_vectors_array: np.ndarray = np.stack(all_noise_vectors, axis=0)
-    logging.info("Resulting noise vector shape: {}".format(noise_vectors_array.shape))
-    logging.debug("Resulting noise vector : {}".format(noise_vectors_array))
+    for current_batch in range(num_batches):
+        identifier: str = "caption_list_{}".format(current_batch)
 
-    np.save(file=noise_vector_file, arr=noise_vectors_array)
+        caption_list: List[str] = [caption for _ in range(captions_per_batch)]
+        batch_generated_files: List[BirdGenerationFromCaption] = generate_images(config_file=run_config_file,
+                                                                                 gpu_id=run_gpu_id,
+                                                                                 identifier=identifier,
+                                                                                 caption_list=caption_list)
+        batch_generated_files = sorted(batch_generated_files,
+                                       key=lambda result: result.caption_index)
+        for generation_result in batch_generated_files:
+            all_noise_array[next_image_position] = generation_result.noise_vector
+            next_image_position += 1
+
+        all_generated_files += batch_generated_files
+
+    logging.info("Resulting noise vector shape: {}".format(all_noise_array.shape))
+    logging.debug("Resulting noise vector : {}".format(all_noise_array))
+
+    np.save(file=noise_vector_file, arr=all_noise_array)
     logging.info("Noise vector stored at {}".format(noise_vector_file))
 
-    pd.DataFrame(generated_files).to_csv(metadata_file)
-    logging.info("Metadata file written as CSV at {}".format(metadata_file))
+    pd.DataFrame(all_generated_files).to_csv(metadata_file)
+    logging.info("Metadata file written as CSV at {} for {} images".format(metadata_file, len(all_generated_files)))

@@ -12,7 +12,6 @@ POSITIVE_CLASS_INDEX = 1
 
 def predict_feature(model_wrapper: FeaturePredictorModelWrapper, transform: Compose,
                     image_file: str) -> float:
-
     pil_image = Image.open(image_file)
     transformed_image: Tensor = transform(pil_image)
 
@@ -21,4 +20,4 @@ def predict_feature(model_wrapper: FeaturePredictorModelWrapper, transform: Comp
     class_probabilities: Tensor = class_probabilities.squeeze(0)
 
     logging.debug("class_probabilities: {} shape: {}".format(class_probabilities, class_probabilities.shape))
-    return class_probabilities[POSITIVE_CLASS_INDEX]
+    return class_probabilities[POSITIVE_CLASS_INDEX].item()

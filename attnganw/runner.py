@@ -34,15 +34,10 @@ def get_output_directory(dataset_name: str, config_name: str) -> str:
     return output_directory
 
 
-def generate_images(config_file: str, gpu_id: int, random_seed: int, identifier: str, caption_list: List[str]) -> List[
-    BirdGenerationFromCaption]:
+def generate_images(config_file: str, gpu_id: int, identifier: str,
+                    caption_list: List[str]) -> List[BirdGenerationFromCaption]:
     cfg_from_file(config_file)
     cfg.GPU_ID = gpu_id
-
-    set_random_seed(random_seed)
-
-    if cfg.CUDA:
-        torch.cuda.manual_seed_all(random_seed)
 
     dataset_split: str = 'test'
     shuffle_data_loader: bool = True
