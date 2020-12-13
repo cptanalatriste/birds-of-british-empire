@@ -1,24 +1,14 @@
-import random
 from datetime import datetime
 from typing import List
 
 import dateutil
-import numpy as np
 import torch
 from datasets import TextDataset
 from miscc.config import cfg_from_file, cfg
 from torchvision.transforms import transforms
 
+from attnganw.randomutils import set_random_seed
 from attnganw.train import GanTrainerWrapper, BirdGenerationFromCaption
-
-
-def set_random_seed(random_seed: int) -> None:
-    random.seed(random_seed)
-    np.random.seed(random_seed)
-    torch.manual_seed(random_seed)
-
-    if cfg.CUDA:
-        torch.cuda.manual_seed_all(random_seed)
 
 
 def get_text_dataset(tree_base_size: int, tree_branch_number: int, dataset_split: str,

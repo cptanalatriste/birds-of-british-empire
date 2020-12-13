@@ -5,7 +5,8 @@ import random
 import sys
 import time
 
-from attnganw.runner import set_random_seed, get_output_directory, get_text_dataset
+from attnganw.runner import get_output_directory, get_text_dataset
+from attnganw.randomutils import set_random_seed
 from attnganw.train import GanTrainerWrapper
 from datasets import TextDataset
 from miscc.config import cfg, cfg_from_file

@@ -21,34 +21,45 @@ IS_TRAINING_IMAGE_COLUMN: str = 'is_training_image'
 PRESENT_ATTRIBUTE_VALUE: int = 1
 ABSENT_ATTRIBUTE_VALUE: int = 0
 
+RESNET50_MEANS: List[float] = [0.485, 0.456, 0.406]
+RESNET50_STD_DEVS: List[float] = [0.229, 0.224, 0.225]
+
 
 class ResNet50DataLoaderBuilder:
 
     def __init__(self, image_folder: str, batch_size: int, input_resize: int, is_training: bool):
-        self.means: List[float] = [0.485, 0.456, 0.406]
-        self.std_devs: List[float] = [0.229, 0.224, 0.225]
 
         if is_training:
-            self.image_transformations: Compose = transforms.Compose([
-                transforms.Resize(size=(input_resize, input_resize)),
-                transforms.RandomAffine(0, shear=10, scale=(0.8, 1.2)),
-                transforms.RandomHorizontalFlip(),
-                transforms.ToTensor(),
-                transforms.Normalize(mean=self.means,
-                                     std=self.std_devs)
-            ])
+            self.image_transformations: Compose = ResNet50DataLoaderBuilder.get_training_transformation(
+                input_resize=input_resize)
         else:
-            self.image_transformations: Compose = transforms.Compose([
-                transforms.Resize(size=(input_resize, input_resize)),
-                transforms.ToTensor(),
-                transforms.Normalize(mean=self.means,
-                                     std=self.std_devs)
-            ])
+            self.image_transformations: Compose = ResNet50DataLoaderBuilder.get_validation_transformation(
+                input_resize=input_resize)
 
         self.image_folder: ImageFolder = ImageFolder(root=image_folder, transform=self.image_transformations,
                                                      is_valid_file=can_open_image_file)
         self.class_names = self.image_folder.classes
         self.batch_size: int = batch_size
+
+    @staticmethod
+    def get_validation_transformation(input_resize: int) -> Compose:
+        return transforms.Compose([
+            transforms.Resize(size=(input_resize, input_resize)),
+            transforms.ToTensor(),
+            transforms.Normalize(mean=RESNET50_MEANS,
+                                 std=RESNET50_STD_DEVS)
+        ])
+
+    @staticmethod
+    def get_training_transformation(input_resize: int) -> Compose:
+        return transforms.Compose([
+            transforms.Resize(size=(input_resize, input_resize)),
+            transforms.RandomAffine(0, shear=10, scale=(0.8, 1.2)),
+            transforms.RandomHorizontalFlip(),
+            transforms.ToTensor(),
+            transforms.Normalize(mean=RESNET50_MEANS,
+                                 std=RESNET50_STD_DEVS)
+        ])
 
     def build(self) -> DataLoader:
         sampler = get_weighted_sampler(self.image_folder)

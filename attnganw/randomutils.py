@@ -1,6 +1,8 @@
 import logging
+import random
 from typing import List
 
+import numpy as np
 import torch
 from torch import Tensor
 
@@ -22,6 +24,7 @@ def get_zeroes(shape, gpu_id: int) -> Tensor:
         zero = zero.cuda()
 
     return zero
+
 
 def get_vector_interpolation(batch_size: int, noise_vector_size: int, gpu_id: int,
                              noise_vector_start: Tensor = None,
@@ -45,3 +48,14 @@ def get_vector_interpolation(batch_size: int, noise_vector_size: int, gpu_id: in
         noise_vectors.append(new_noise_vector)
 
     return noise_vectors
+
+
+def set_random_seed(random_seed: int) -> None:
+    random.seed(random_seed)
+    np.random.seed(random_seed)
+    torch.manual_seed(random_seed)
+
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed_all(random_seed)
+
+    logging.info("Random seed set to {}".format(random_seed))

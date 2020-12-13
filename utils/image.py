@@ -30,7 +30,11 @@ def plot_images_with_labels(images: Tensor, classes: Tensor, class_names: Dict[i
     for image_index in range(total_images):
         axis: Axes = plt.subplot(total_images // 2, 2, image_index + 1)
         axis.axis('off')
-        axis.set_title('class: {}'.format(class_names[classes[image_index]]))
+
+        class_index: int = classes[image_index]
+        class_name: str = class_names[class_index]
+
+        axis.set_title('class: {} ({})'.format(class_name, class_index))
         denormalize_and_show(images_tensor=images.data[image_index], means=means, standard_devs=standard_devs)
 
     plt.savefig(fname=file_name, bbox_inches='tight')

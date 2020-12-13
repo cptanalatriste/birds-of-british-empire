@@ -9,12 +9,12 @@ from torch.nn import Module
 from torch.optim import Optimizer
 from torch.utils.data import DataLoader
 
-from featurepred import FeaturePredictorModelWrapper
+from featurepred import model
 
 
 class FeaturePredictorTrainer:
 
-    def __init__(self, model_wrapper: FeaturePredictorModelWrapper):
+    def __init__(self, model_wrapper: model):
         self.model_wrapper: Module = model_wrapper
 
     def train_predictor(self, epochs: int, train_loader: DataLoader, validation_loader: DataLoader,
@@ -106,7 +106,7 @@ def evaluate(model: Module, validation_loader: DataLoader, loss_function, device
 
 
 def predict_and_evaluate(model_output: Tensor, real_labels: Tensor) -> Tuple[float, float]:
-    class_by_model: Tensor = output_to_predictions(model_output=model_output)
+    class_by_model: Tensor = output_to_target_class(model_output=model_output)
     model_matches = torch.eq(class_by_model, real_labels).view(-1)
 
     correct_predictions = torch.sum(model_matches).item()
@@ -116,6 +116,11 @@ def predict_and_evaluate(model_output: Tensor, real_labels: Tensor) -> Tuple[flo
     return correct_predictions, evaluations
 
 
-def output_to_predictions(model_output: Tensor) -> Tensor:
+def output_to_target_class(model_output: Tensor) -> Tensor:
     class_by_model = torch.max(F.softmax(model_output), dim=1)[1]
     return class_by_model
+
+
+def output_to_class_probabilities(model_output: Tensor) -> Tensor:
+    class_probabilities = F.softmax(model_output)
+    return class_probabilities
