@@ -50,6 +50,27 @@ def get_vector_interpolation(batch_size: int, noise_vector_size: int, gpu_id: in
     return noise_vectors
 
 
+def interpolate_from_boundary(batch_size: int, noise_vector_size: int, gpu_id: int) -> List[Tensor]:
+    boundary_file: str = config.generation['noise_interpolation_file']
+    start_distance: float = config.generation['noise_interpolation_start']
+    end_distance: float = config.generation['noise_interpolation_end']
+    input_latent_code: Tensor = torch.randn(batch_size, noise_vector_size, dtype=torch.float)
+    steps = config.generation['noise_interpolation_steps']
+
+    semantic_boundary: np.ndarray = np.load(boundary_file)
+    logging.info("Boundary loaded from {} . Shape {}".format(boundary_file, semantic_boundary.shape))
+    linspace: np.ndarray = np.linspace(start_distance, end_distance, steps)
+
+    noise_vectors: List[Tensor] = []
+    for factor in np.nditer(linspace):
+        new_noise_vector: Tensor = input_latent_code + factor * semantic_boundary
+        if gpu_id >= 0:
+            new_noise_vector = new_noise_vector.cuda()
+        noise_vectors.append(new_noise_vector)
+
+    return noise_vectors
+
+
 def set_random_seed(random_seed: int) -> None:
     random.seed(random_seed)
     np.random.seed(random_seed)

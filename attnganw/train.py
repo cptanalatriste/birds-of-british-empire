@@ -8,7 +8,7 @@ from torch.utils.data import DataLoader
 from trainer import condGANTrainer
 
 from attnganw import config
-from attnganw.randomutils import get_single_normal_vector, get_vector_interpolation
+from attnganw.randomutils import get_single_normal_vector, get_vector_interpolation, interpolate_from_boundary
 from attnganw.text import TextProcessor, directory_to_trainer_input, get_lines_from_file, caption_list_to_trainer_input
 
 
@@ -75,10 +75,10 @@ class GanTrainerWrapper:
                                                                         text_processor=self.text_processor)
 
         generated_images_data: List[Dict]
-        if config.generation['do_noise_interpolation']:
+        if config.generation['noise_interpolation_enabled']:
             logging.info("Performing noise interpolation")
             generated_images_data = self.gan_trainer.generate_examples(captions_per_file=captions_per_file,
-                                                                       noise_vector_generator=get_vector_interpolation)
+                                                                       noise_vector_generator=interpolate_from_boundary)
         else:
             generated_images_data = self.gan_trainer.generate_examples(captions_per_file=captions_per_file,
                                                                        noise_vector_generator=default_noise_vector_generator)

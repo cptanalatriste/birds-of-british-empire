@@ -2,12 +2,10 @@ from datetime import datetime
 from typing import List
 
 import dateutil
-import torch
 from datasets import TextDataset
 from miscc.config import cfg_from_file, cfg
 from torchvision.transforms import transforms
 
-from attnganw.randomutils import set_random_seed
 from attnganw.train import GanTrainerWrapper, BirdGenerationFromCaption
 
 

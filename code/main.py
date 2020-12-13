@@ -1,4 +1,5 @@
 import argparse
+import logging
 import os
 import pprint
 import random
@@ -28,6 +29,8 @@ def parse_args():
 
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO)
+
     args = parse_args()
     if args.cfg_file is not None:
         cfg_from_file(args.cfg_file)
