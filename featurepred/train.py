@@ -1,59 +1,37 @@
 import logging
 import time
-from typing import Tuple, List
+from typing import Tuple
 
 import torch
 import torch.nn.functional as F
-from torch import nn, Tensor
+from torch import Tensor
 from torch.nn import Module
 from torch.optim import Optimizer
 from torch.utils.data import DataLoader
 
+from featurepred import FeaturePredictorModelWrapper
+
 
 class FeaturePredictorTrainer:
 
-    def __init__(self, base_model: Module, linear_out_features: int, model_state_file: str):
-        self.model_state_file = model_state_file
-
-        self.model: Module = base_model
-        self.freeze_layers()
-
-        classifier_block_features: int = self.model.fc.in_features
-        linear_out_features: int = linear_out_features
-        self.model.fc = nn.Sequential(
-            nn.Linear(in_features=classifier_block_features, out_features=linear_out_features),
-            nn.ReLU(),
-            nn.Linear(in_features=linear_out_features, out_features=2)
-        )
-
-    def load_model_from_file(self, device: str) -> None:
-        self.model.load_state_dict(torch.load(self.model_state_file))
-        self.model = self.model.to(device)
-
-        logging.info("Model state loaded from {} to device {}".format(self.model_state_file, device))
-
-    def freeze_layers(self):
-        for name, parameter in self.model.named_parameters():
-            parameter.requires_grad = False
-
-    def save_model_state(self):
-        torch.save(self.model.state_dict(), self.model_state_file)
-        logging.info("Model state saved at {}".format(self.model_state_file))
+    def __init__(self, model_wrapper: FeaturePredictorModelWrapper):
+        self.model_wrapper: Module = model_wrapper
 
     def train_predictor(self, epochs: int, train_loader: DataLoader, validation_loader: DataLoader,
                         optimiser: Optimizer, loss_function, device):
-        self.model = self.model.to(device)
+        model: Module = self.model_wrapper.model.to(device)
 
         train_start: float = time.time()
         best_accuracy: float = 0.0
-        self.save_model_state()
+        self.model_wrapper.save_model_state()
 
         for epoch in range(1, epochs + 1):
-            training_loss: float = do_train(model=self.model, train_loader=train_loader, optimiser=optimiser,
+            training_loss: float = do_train(model=model, train_loader=train_loader, optimiser=optimiser,
                                             loss_function=loss_function, device=device)
             validation_loss: float
             validation_accuracy: float
-            validation_loss, validation_accuracy = evaluate(model=self.model, validation_loader=validation_loader,
+            validation_loss, validation_accuracy = evaluate(model=model,
+                                                            validation_loader=validation_loader,
                                                             loss_function=loss_function, device=device)
 
             logging.info("Epoch: {}, training Loss: {:.2f}, validation Loss: {:.2f}, accuracy: {:.2f}".format(epoch,
@@ -63,14 +41,14 @@ class FeaturePredictorTrainer:
 
             if validation_accuracy > best_accuracy:
                 best_accuracy = validation_accuracy
-                self.save_model_state()
+                self.model_wrapper.save_model_state()
 
         training_time: float = time.time() - train_start
         logging.info('Training complete in {:.0f}m {:.0f}s'.format(training_time // 60, training_time % 60))
         logging.info('Best accuracy: {}'.format(best_accuracy))
 
 
-def do_train(model, train_loader: DataLoader, optimiser: Optimizer, loss_function, device) -> float:
+def do_train(model: Module, train_loader: DataLoader, optimiser: Optimizer, loss_function, device) -> float:
     model.train()
 
     total_images: int = len(train_loader.dataset)
@@ -98,7 +76,7 @@ def do_train(model, train_loader: DataLoader, optimiser: Optimizer, loss_functio
     return total_loss
 
 
-def evaluate(model, validation_loader: DataLoader, loss_function, device) -> Tuple[float, float]:
+def evaluate(model: Module, validation_loader: DataLoader, loss_function, device) -> Tuple[float, float]:
     model.eval()
 
     total_images: int = len(validation_loader.dataset)
