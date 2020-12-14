@@ -16,7 +16,7 @@ if __name__ == "__main__":
     run_random_seed: int = 100
     metadata_file: str = 'metadata_file.csv'
     noise_vector_file: str = "noise_vectors_array.npy"
-    num_batches: int = 15
+    num_batches: int = 150
     captions_per_batch: int = 40
     # num_batches: int = 3
     # captions_per_batch: int = 2

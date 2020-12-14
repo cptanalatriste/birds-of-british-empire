@@ -18,7 +18,13 @@ def start_training(predictor_trainer: FeaturePredictorTrainer, train_data_loader
                    validation_data_loader: DataLoader,
                    num_epochs: int, optimiser_learning_rate: float):
     model: Module = predictor_trainer.model_wrapper.model
-    optimiser = optim.Adam(params=model.fc.parameters(), lr=optimiser_learning_rate)
+
+    if predictor_trainer.model_wrapper.feature_extraction:
+        logging.info("Feature extraction: Only optimizing last layer's parameters")
+        optimiser = optim.Adam(params=model.fc.parameters(), lr=optimiser_learning_rate)
+    else:
+        optimiser = optim.Adam(params=model.parameters(), lr=optimiser_learning_rate)
+
     loss_function = torch.nn.CrossEntropyLoss()
     device = torch.device("cpu")
     if torch.cuda.is_available():
@@ -41,17 +47,19 @@ if __name__ == "__main__":
     input_resize: int = INPUT_RESIZE
     model_state_file: str = 'feature_predictor.pt'
     random_seed: int = 100
+    data_loader_workers: int = 4
 
     set_random_seed(random_seed=random_seed)
     model_wrapper: FeaturePredictorModelWrapper = FeaturePredictorModelWrapper(model_state_file=model_state_file,
-                                                                               is_training=True)
+                                                                               feature_extraction=True)
 
     trainer: FeaturePredictorTrainer = FeaturePredictorTrainer(model_wrapper=model_wrapper)
 
     train_dataloader_builder: ResNet50DataLoaderBuilder = ResNet50DataLoaderBuilder(image_folder=train_image_folder,
                                                                                     batch_size=batch_size,
                                                                                     input_resize=input_resize,
-                                                                                    is_training=True)
+                                                                                    is_training=True,
+                                                                                    data_loader_workers=data_loader_workers)
     train_loader: DataLoader = train_dataloader_builder.build()
     train_images, train_classes = next(iter(train_loader))
     plot_images_with_labels(images=train_images[:10], classes=train_classes[:10],
@@ -63,7 +71,8 @@ if __name__ == "__main__":
         image_folder=validation_image_folder,
         batch_size=batch_size,
         input_resize=input_resize,
-        is_training=False)
+        is_training=False,
+        data_loader_workers=data_loader_workers)
     validation_loader: DataLoader = valid_data_loader_builder.build()
     start_training(predictor_trainer=trainer, train_data_loader=train_loader, validation_data_loader=validation_loader,
                    num_epochs=epochs,

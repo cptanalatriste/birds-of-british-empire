@@ -8,14 +8,15 @@ from torchvision import models
 
 class FeaturePredictorModelWrapper:
 
-    def __init__(self, model_state_file: str, is_training: bool):
+    def __init__(self, model_state_file: str, feature_extraction: bool):
         self.model_state_file = model_state_file
 
         self.model: Module = models.resnet50(pretrained=True)
         classifier_block_features: int = self.model.fc.in_features
         linear_out_features: int = 128
+        self.feature_extraction = feature_extraction
 
-        if is_training:
+        if self.feature_extraction:
             self.freeze_layers()
 
         self.model.fc = nn.Sequential(
@@ -25,6 +26,7 @@ class FeaturePredictorModelWrapper:
         )
 
     def freeze_layers(self):
+        logging.info("Freezing base model parameters for feature extraction")
         for name, parameter in self.model.named_parameters():
             parameter.requires_grad = False
 

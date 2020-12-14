@@ -26,11 +26,11 @@ class FeaturePredictorTrainer:
         self.model_wrapper.save_model_state()
 
         for epoch in range(1, epochs + 1):
-            training_loss: float = do_train(model=model, train_loader=train_loader, optimiser=optimiser,
+            training_loss: float = do_train(model_to_train=model, train_loader=train_loader, optimiser=optimiser,
                                             loss_function=loss_function, device=device)
             validation_loss: float
             validation_accuracy: float
-            validation_loss, validation_accuracy = evaluate(model=model,
+            validation_loss, validation_accuracy = evaluate(model_to_validate=model,
                                                             validation_loader=validation_loader,
                                                             loss_function=loss_function, device=device)
 
@@ -48,8 +48,8 @@ class FeaturePredictorTrainer:
         logging.info('Best accuracy: {}'.format(best_accuracy))
 
 
-def do_train(model: Module, train_loader: DataLoader, optimiser: Optimizer, loss_function, device) -> float:
-    model.train()
+def do_train(model_to_train: Module, train_loader: DataLoader, optimiser: Optimizer, loss_function, device) -> float:
+    model_to_train.train()
 
     total_images: int = len(train_loader.dataset)
     running_loss: float = 0.0
@@ -62,7 +62,7 @@ def do_train(model: Module, train_loader: DataLoader, optimiser: Optimizer, loss
         images = images.to(device)
         classes_in_batch = classes_in_batch.to(device)
 
-        model_output: Tensor = model(images)
+        model_output: Tensor = model_to_train(images)
         training_loss: Tensor = loss_function(model_output, classes_in_batch)
 
         optimiser.zero_grad()
@@ -76,8 +76,8 @@ def do_train(model: Module, train_loader: DataLoader, optimiser: Optimizer, loss
     return total_loss
 
 
-def evaluate(model: Module, validation_loader: DataLoader, loss_function, device) -> Tuple[float, float]:
-    model.eval()
+def evaluate(model_to_validate: Module, validation_loader: DataLoader, loss_function, device) -> Tuple[float, float]:
+    model_to_validate.eval()
 
     total_images: int = len(validation_loader.dataset)
     running_loss: float = 0.0
@@ -91,7 +91,7 @@ def evaluate(model: Module, validation_loader: DataLoader, loss_function, device
         images = images.to(device)
         classes_in_batch = classes_in_batch.to(device)
 
-        model_output: Tensor = model(images)
+        model_output: Tensor = model_to_validate(images)
         validation_loss: Tensor = loss_function(model_output, classes_in_batch)
         batch_matches, _ = predict_and_evaluate(model_output=model_output, real_labels=classes_in_batch)
 

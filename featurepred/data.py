@@ -27,7 +27,8 @@ RESNET50_STD_DEVS: List[float] = [0.229, 0.224, 0.225]
 
 class ResNet50DataLoaderBuilder:
 
-    def __init__(self, image_folder: str, batch_size: int, input_resize: int, is_training: bool):
+    def __init__(self, image_folder: str, batch_size: int, input_resize: int, is_training: bool,
+                 data_loader_workers: int):
 
         if is_training:
             self.image_transformations: Compose = ResNet50DataLoaderBuilder.get_training_transformation(
@@ -40,6 +41,7 @@ class ResNet50DataLoaderBuilder:
                                                      is_valid_file=can_open_image_file)
         self.class_names = self.image_folder.classes
         self.batch_size: int = batch_size
+        self.data_loader_workers: int = data_loader_workers
 
     @staticmethod
     def get_validation_transformation(input_resize: int) -> Compose:
@@ -63,7 +65,8 @@ class ResNet50DataLoaderBuilder:
 
     def build(self) -> DataLoader:
         sampler = get_weighted_sampler(self.image_folder)
-        return DataLoader(dataset=self.image_folder, batch_size=self.batch_size, sampler=sampler)
+        return DataLoader(dataset=self.image_folder, batch_size=self.batch_size, sampler=sampler,
+                          num_workers=self.data_loader_workers)
 
 
 def get_weighted_sampler(image_folder: ImageFolder) -> WeightedRandomSampler:

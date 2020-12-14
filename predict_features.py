@@ -18,7 +18,7 @@ if __name__ == "__main__":
     metadata_file: str = "code/metadata_file.csv"
     noise_vector_file: str = "code/noise_vectors_array.npy"
     prediction_array_file: str = 'predictions.npy'
-    model_state_file: str = 'feature_predictor_bk.pt'
+    model_state_file: str = 'feature_predictor.pt'
     image_transform: Compose = ResNet50DataLoaderBuilder.get_validation_transformation(input_resize=INPUT_RESIZE)
 
     metadata_dataframe: pd.DataFrame = pd.read_csv(metadata_file)
@@ -28,7 +28,7 @@ if __name__ == "__main__":
     logging.info("Noise vectors loaded from: {}".format(noise_vector_file))
 
     model_wrapper: FeaturePredictorModelWrapper = FeaturePredictorModelWrapper(model_state_file=model_state_file,
-                                                                               is_training=False)
+                                                                               feature_extraction=False)
     model_wrapper.load_model_from_file(device="cpu")
     model_wrapper.model.eval()
 
