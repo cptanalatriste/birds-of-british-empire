@@ -15,8 +15,8 @@ if __name__ == "__main__":
 
     logging.basicConfig(level=logging.INFO)
 
-    metadata_file: str = "code/metadata_file.csv"
-    noise_vector_file: str = "code/noise_vectors_array.npy"
+    metadata_file: str = "artifacts/metadata_file.csv"
+    noise_vector_file: str = "artifacts/noise_vectors_array.npy"
     prediction_array_file: str = 'predictions.npy'
     model_state_file: str = 'feature_predictor.pt'
     image_transform: Compose = ResNet50DataLoaderBuilder.get_validation_transformation(input_resize=INPUT_RESIZE)

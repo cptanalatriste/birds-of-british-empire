@@ -127,7 +127,10 @@ class BirdDatasetRepository:
 
         flag_value: int = ABSENT_ATTRIBUTE_VALUE
         if is_training:
+            logging.info("Only including training images.")
             flag_value = PRESENT_ATTRIBUTE_VALUE
+        else:
+            logging.info("Only including test images.")
 
         images_to_include: Series = self.split_dataframe[
             self.split_dataframe[IS_TRAINING_IMAGE_COLUMN] == flag_value].index

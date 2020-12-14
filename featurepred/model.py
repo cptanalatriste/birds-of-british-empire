@@ -18,6 +18,8 @@ class FeaturePredictorModelWrapper:
 
         if self.feature_extraction:
             self.freeze_layers()
+        else:
+            logging.info("Fine-tuning: Skipping layer freezing")
 
         self.model.fc = nn.Sequential(
             nn.Linear(in_features=classifier_block_features, out_features=linear_out_features),

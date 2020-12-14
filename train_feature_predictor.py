@@ -23,6 +23,7 @@ def start_training(predictor_trainer: FeaturePredictorTrainer, train_data_loader
         logging.info("Feature extraction: Only optimizing last layer's parameters")
         optimiser = optim.Adam(params=model.fc.parameters(), lr=optimiser_learning_rate)
     else:
+        logging.info("Fine-tuning: All model parameters are optimised")
         optimiser = optim.Adam(params=model.parameters(), lr=optimiser_learning_rate)
 
     loss_function = torch.nn.CrossEntropyLoss()
