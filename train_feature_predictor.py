@@ -1,9 +1,12 @@
 import logging
+from typing import List
 
 import torch
+from matplotlib.figure import Figure
 from torch import optim, Tensor
 from torch.nn import Module
 from torch.utils.data import DataLoader
+from torch.utils.tensorboard import SummaryWriter
 
 from attnganw.randomutils import set_random_seed
 from featurepred.model import FeaturePredictorModelWrapper
@@ -50,11 +53,16 @@ if __name__ == "__main__":
     random_seed: int = 100
     data_loader_workers: int = 4
 
+    log_directory: str = 'runs/feature_predictor_experiment'
+    summary_writer: SummaryWriter = SummaryWriter(log_dir=log_directory)
+
     set_random_seed(random_seed=random_seed)
+
     model_wrapper: FeaturePredictorModelWrapper = FeaturePredictorModelWrapper(model_state_file=model_state_file,
                                                                                feature_extraction=True)
 
-    trainer: FeaturePredictorTrainer = FeaturePredictorTrainer(model_wrapper=model_wrapper)
+    trainer: FeaturePredictorTrainer = FeaturePredictorTrainer(model_wrapper=model_wrapper,
+                                                               summary_writer=summary_writer)
 
     train_dataloader_builder: ResNet50DataLoaderBuilder = ResNet50DataLoaderBuilder(image_folder=train_image_folder,
                                                                                     batch_size=batch_size,
@@ -63,10 +71,20 @@ if __name__ == "__main__":
                                                                                     data_loader_workers=data_loader_workers)
     train_loader: DataLoader = train_dataloader_builder.build()
     train_images, train_classes = next(iter(train_loader))
-    plot_images_with_labels(images=train_images[:10], classes=train_classes[:10],
-                            class_names=train_dataloader_builder.class_names,
-                            means=RESNET50_MEANS, standard_devs=RESNET50_STD_DEVS,
-                            file_name='training_sample.png')
+
+    logging.info("Starting TensorBoard ...")
+    summary_writer.add_graph(model=model_wrapper.model, input_to_model=train_images)
+    train_labels: List[str] = [train_dataloader_builder.class_names[class_index] for class_index in train_classes]
+    num_channels: int = 3
+    summary_writer.add_embedding(mat=train_images.view(-1, num_channels * input_resize * input_resize),
+                                 label_img=train_images, metadata=train_labels)
+
+    training_data_plot: Figure = plot_images_with_labels(images=train_images[:10], classes=train_classes[:10],
+                                                         class_names=train_dataloader_builder.class_names,
+                                                         means=RESNET50_MEANS, standard_devs=RESNET50_STD_DEVS,
+                                                         file_name='training_sample.png')
+    summary_writer.add_figure(tag='training_data_plot', figure=training_data_plot)
+    summary_writer.close()
 
     valid_data_loader_builder: ResNet50DataLoaderBuilder = ResNet50DataLoaderBuilder(
         image_folder=validation_image_folder,
@@ -85,7 +103,9 @@ if __name__ == "__main__":
     valid_images = valid_images[:10]
     predicted_classes: Tensor = output_to_target_class(model_output=model_wrapper.model(valid_images[:10]))
 
-    plot_images_with_labels(images=valid_images, classes=predicted_classes,
-                            class_names=valid_data_loader_builder.class_names,
-                            means=RESNET50_MEANS, standard_devs=RESNET50_STD_DEVS,
-                            file_name='prediction_sample.png')
+    validation_data_plot: Figure = plot_images_with_labels(images=valid_images, classes=predicted_classes,
+                                                           class_names=valid_data_loader_builder.class_names,
+                                                           means=RESNET50_MEANS, standard_devs=RESNET50_STD_DEVS,
+                                                           file_name='prediction_sample.png')
+    summary_writer.add_figure(tag='validation_data_plot', figure=validation_data_plot)
+    summary_writer.close()

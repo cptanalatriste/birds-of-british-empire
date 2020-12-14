@@ -8,14 +8,16 @@ from torch import Tensor
 from torch.nn import Module
 from torch.optim import Optimizer
 from torch.utils.data import DataLoader
+from torch.utils.tensorboard import SummaryWriter
 
 from featurepred import model
 
 
 class FeaturePredictorTrainer:
 
-    def __init__(self, model_wrapper: model):
+    def __init__(self, model_wrapper: model, summary_writer: SummaryWriter):
         self.model_wrapper: Module = model_wrapper
+        self.summary_writer: SummaryWriter = summary_writer
 
     def train_predictor(self, epochs: int, train_loader: DataLoader, validation_loader: DataLoader,
                         optimiser: Optimizer, loss_function, device):
@@ -38,6 +40,9 @@ class FeaturePredictorTrainer:
                                                                                                               training_loss,
                                                                                                               validation_loss,
                                                                                                               validation_accuracy))
+            global_step: int = epoch * len(train_loader)
+            self.summary_writer.add_scalar(tag='training_loss', scalar_value=training_loss, global_step=global_step)
+            self.summary_writer.close()
 
             if validation_accuracy > best_accuracy:
                 best_accuracy = validation_accuracy

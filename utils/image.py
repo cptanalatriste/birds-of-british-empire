@@ -4,6 +4,7 @@ from typing import List, Dict
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.axes import Axes
+from matplotlib.figure import Figure
 from torch import Tensor
 
 
@@ -22,8 +23,8 @@ def denormalize_and_show(images_tensor: Tensor, means: List[float], standard_dev
 
 
 def plot_images_with_labels(images: Tensor, classes: Tensor, class_names: Dict[int, str], file_name: str,
-                            means: List[float], standard_devs: List[float]) -> None:
-    plt.figure()
+                            means: List[float], standard_devs: List[float]) -> Figure:
+    figure = plt.figure()
 
     total_images: int = images.size()[0]
 
@@ -39,3 +40,5 @@ def plot_images_with_labels(images: Tensor, classes: Tensor, class_names: Dict[i
 
     plt.savefig(fname=file_name, bbox_inches='tight')
     logging.info("Image saved at {}".format(file_name))
+
+    return figure
