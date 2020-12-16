@@ -1,6 +1,7 @@
 import logging
 import shutil
 import traceback
+from pathlib import Path
 from typing import List
 
 import pandas as pd
@@ -91,7 +92,7 @@ def can_open_image_file(image_path: str):
 
 class BirdDatasetRepository:
 
-    def __init__(self, attributes_data_file: str, images_data_file: str, certainty_id: int,
+    def __init__(self, attributes_data_file: str, images_data_file: str, minimum_certainty_id: int,
                  split_data_file: str, is_training: bool):
         self.attributes_dataframe: DataFrame = pd.read_csv(attributes_data_file, sep='\s+', header=None,
                                                            error_bad_lines=False,
@@ -108,7 +109,9 @@ class BirdDatasetRepository:
                                                       names=[IMAGE_ID_COLUMN, IS_TRAINING_IMAGE_COLUMN])
 
         self.filter_by_train_test_split(is_training=is_training)
-        self.filter_attributes_by_certainty_id(certainty_id=certainty_id)
+        self.filter_attributes_by_minimum_certainty(minimum_certainty_id=minimum_certainty_id)
+        logging.info("Minimum certainty to include: {}".format(minimum_certainty_id))
+
         self.attributes_dataframe = self.attributes_dataframe.pivot(index=IMAGE_ID_COLUMN, columns=ATTRIBUTE_ID_COLUMN,
                                                                     values=IS_PRESENT_COLUMN)
 
@@ -119,9 +122,9 @@ class BirdDatasetRepository:
                                                        usecols=[0, 1],
                                                        names=[IMAGE_ID_COLUMN, IMAGE_NAME_COLUMN])
 
-    def filter_attributes_by_certainty_id(self, certainty_id: int) -> None:
+    def filter_attributes_by_minimum_certainty(self, minimum_certainty_id: int) -> None:
         self.attributes_dataframe = self.attributes_dataframe.loc[
-            self.attributes_dataframe[CERTAINTY_ID_COLUMN] == certainty_id]
+            self.attributes_dataframe[CERTAINTY_ID_COLUMN] >= minimum_certainty_id]
 
     def filter_by_train_test_split(self, is_training: bool):
 
@@ -164,20 +167,26 @@ class ImageFolderBuilder:
         self.images_data_file = images_data_file
         self.split_data_file = split_data_file
 
-    def build(self, attribute_id: int, certainty_id: int, positive_image_folder: str, negative_image_folder: str,
+    def build(self, attribute_id: int, minimum_certainty_id: int, positive_image_folder: str,
+              negative_image_folder: str,
               is_training: bool):
         self.copy_by_attribute_value(attribute_id=attribute_id, attribute_value=PRESENT_ATTRIBUTE_VALUE,
-                                     target_directory=positive_image_folder, certainty_id=certainty_id,
+                                     target_directory=positive_image_folder, minimum_certainty_id=minimum_certainty_id,
                                      is_training=is_training)
         self.copy_by_attribute_value(attribute_id=attribute_id, attribute_value=ABSENT_ATTRIBUTE_VALUE,
-                                     target_directory=negative_image_folder, certainty_id=certainty_id,
+                                     target_directory=negative_image_folder, minimum_certainty_id=minimum_certainty_id,
                                      is_training=is_training)
 
     def copy_by_attribute_value(self, attribute_id: int, attribute_value: int, target_directory: str,
-                                certainty_id: int, is_training: bool):
+                                minimum_certainty_id: int, is_training: bool):
+        shutil.rmtree(path=target_directory, ignore_errors=True)
+        logging.info("Directory {} deleted.".format(target_directory))
+        Path(target_directory).mkdir(parents=True, exist_ok=True)
+        logging.info("Directory {} created.".format(target_directory))
+
         bird_repository: BirdDatasetRepository = BirdDatasetRepository(attributes_data_file=self.attributes_data_file,
                                                                        images_data_file=self.images_data_file,
-                                                                       certainty_id=certainty_id,
+                                                                       minimum_certainty_id=minimum_certainty_id,
                                                                        split_data_file=self.split_data_file,
                                                                        is_training=is_training)
 

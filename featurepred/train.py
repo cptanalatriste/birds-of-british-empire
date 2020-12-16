@@ -42,6 +42,8 @@ class FeaturePredictorTrainer:
                                                                                                               validation_accuracy))
             global_step: int = epoch * len(train_loader)
             self.summary_writer.add_scalar(tag='training_loss', scalar_value=training_loss, global_step=global_step)
+            self.summary_writer.add_scalar(tag='validation_accuracy', scalar_value=validation_accuracy,
+                                           global_step=global_step)
             self.summary_writer.close()
 
             if validation_accuracy > best_accuracy:
