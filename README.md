@@ -77,6 +77,30 @@ qualities) and 2 attention maps.
 ### Creating an API
 [Evaluation code](eval) embedded into a callable containerized API is included in the `eval\` folder.
 
+### Using InterfaceGAN to customize bird generation
+For a given bird attribute in `attributes.txt` , using [InterfaceGAN](https://arxiv.org/abs/2005.09635) we can obtain 
+a direction for latent code manipulation, in order to make it more positive/negative for such attribute.
+
+To obtain the direction as numpy array, `InterfaceGAN` needs a set of latent codes and their corresponding attribute 
+values. The following files support that process:
+
+* `batch_generate_birds.py` generates bird images using random latent codes. The latent codes are stored in
+`noise_vectors_array.npy` and image information, including file location, is saved in the `metadata_file.csv` file.
+* `organize_image_folder.py` will organise images in the [Caltech-UCSD Birds](http://www.vision.caltech.edu/visipedia/CUB-200.html)
+into train and validation folders for an specific attribute from `attributes.txt`. This is needed for training a feature 
+  predictor for that attribute.
+* `train_feature_predictor.py` will train a transfer-learning based feature predictor, using the folder organised via 
+`organize_image_folder.py` as data input. Model state will be stored in the `feature_predictor.pt` file.
+* `batch_predict_feature.py` will predict the value of a feature using the model trained with 
+  `train_feature_predictor.py`, over images generated using the `noise_vectors_array.npy` latent codes. 
+  Features values will be stored in the `predictions.npy` numpy array.
+  
+We can later feed `noise_vectors_array.npy` and `predictions.npy` to the `train_boundary.py` module of `InterfaceGAN` 
+to obtain the direction for attribute manipulation.
+
+Once we have the boundary as a numpy array, can use the `AttnGAN/code/main.py` file for image generation and interpolation.
+Use the `attnganw/config.py` to configure the interpolation parameters.
+
 ### Citing AttnGAN
 If you find AttnGAN useful in your research, please consider citing:
 

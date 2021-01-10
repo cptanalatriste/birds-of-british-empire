@@ -53,8 +53,7 @@ if __name__ == "__main__":
     random_seed: int = 100
     data_loader_workers: int = 4
 
-    log_directory: str = 'runs/feature_predictor_experiment'
-    summary_writer: SummaryWriter = SummaryWriter(log_dir=log_directory)
+    summary_writer: SummaryWriter = SummaryWriter()
 
     set_random_seed(random_seed=random_seed)
 

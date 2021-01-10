@@ -7,3 +7,4 @@ easydict~=1.9
 nltk~=3.5
 pandas~=1.1.3
 scikit-image~=0.17.2
+werkzeug~=1.0.1
