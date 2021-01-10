@@ -55,8 +55,8 @@ class GanTrainerWrapper:
         trainer_input: List[np.ndarray] = caption_list_to_trainer_input(caption_list=caption_list,
                                                                         text_processor=self.text_processor)
         captions_per_file: Dict[str, List] = {identifier: trainer_input}
-        generated_images_data = self.gan_trainer.generate_examples(captions_per_file=captions_per_file,
-                                                                   noise_vector_generator=default_noise_vector_generator)
+        generated_images_data: List[Dict] = self.gan_trainer.generate_examples(captions_per_file=captions_per_file,
+                                                                               noise_vector_generator=get_noise_vector_generator())
 
         logging.info("{} captions processed.".format(len(generated_images_data)))
         return [BirdGenerationFromCaption(**caption_metadata) for caption_metadata in generated_images_data]
@@ -74,14 +74,8 @@ class GanTrainerWrapper:
         captions_per_file: Dict[str, List] = directory_to_trainer_input(file_names=file_names,
                                                                         text_processor=self.text_processor)
 
-        generated_images_data: List[Dict]
-        if config.generation['noise_interpolation_enabled']:
-            logging.info("Performing noise interpolation")
-            generated_images_data = self.gan_trainer.generate_examples(captions_per_file=captions_per_file,
-                                                                       noise_vector_generator=interpolate_from_boundary)
-        else:
-            generated_images_data = self.gan_trainer.generate_examples(captions_per_file=captions_per_file,
-                                                                       noise_vector_generator=default_noise_vector_generator)
+        generated_images_data: List[Dict] = self.gan_trainer.generate_examples(captions_per_file=captions_per_file,
+                                                                               noise_vector_generator=get_noise_vector_generator())
 
         logging.info("{} captions processed.".format(len(generated_images_data)))
         return [BirdGenerationFromCaption(**caption_metadata) for caption_metadata in generated_images_data]
@@ -89,3 +83,11 @@ class GanTrainerWrapper:
 
 def default_noise_vector_generator(batch_size: int, noise_vector_size: int, gpu_id: int) -> List[Tensor]:
     return get_single_normal_vector(shape=(batch_size, noise_vector_size), gpu_id=gpu_id)
+
+
+def get_noise_vector_generator():
+    if config.generation['noise_interpolation_enabled']:
+        logging.info("Performing noise interpolation")
+        return interpolate_from_boundary
+    else:
+        return default_noise_vector_generator
